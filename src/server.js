@@ -8,6 +8,12 @@ import {
   handleProtectedResourceMetadataRequest,
   isMcpPath,
 } from "./httpHandlers.js";
+import {
+  handleOAuthAuthorizeRequest,
+  handleOAuthLoginRequest,
+  handleOAuthMetadataRequest,
+  handleOAuthTokenRequest,
+} from "./oauth/handlers.js";
 
 const logger = createAppLogger(config);
 
@@ -29,6 +35,29 @@ const httpServer = createServer(async (req, res) => {
     url.pathname === "/.well-known/oauth-protected-resource"
   ) {
     handleProtectedResourceMetadataRequest(req, res);
+    return;
+  }
+
+  if (
+    req.method === "GET" &&
+    url.pathname === "/.well-known/oauth-authorization-server"
+  ) {
+    handleOAuthMetadataRequest(req, res);
+    return;
+  }
+
+  if (url.pathname === "/oauth/authorize") {
+    handleOAuthAuthorizeRequest(req, res);
+    return;
+  }
+
+  if (url.pathname === "/oauth/login") {
+    await handleOAuthLoginRequest(req, res);
+    return;
+  }
+
+  if (url.pathname === "/oauth/token") {
+    await handleOAuthTokenRequest(req, res);
     return;
   }
 

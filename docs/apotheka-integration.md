@@ -37,3 +37,15 @@ MEDUSA_CUSTOMER_PASSWORD=...
 The adapter logs in through `/auth/customer/emailpass`, caches the returned customer JWT for a short time, then calls `/store/customers/me`, `/store/orders`, and `/store/orders/:id` with the bearer token and publishable key.
 
 Do not use this shared-credential flow for production ChatGPT users. Production needs OAuth/OIDC or an auth broker.
+
+## OAuth Broker Mode
+
+`AUTH_MODE=broker` keeps the auth broker inside this MCP app:
+
+```text
+ChatGPT -> /oauth/authorize -> ai-app login page -> Medusa emailpass auth
+```
+
+The user still enters normal webshop email/password, but only on the app's login page. ChatGPT receives an opaque OAuth access token, not the Medusa password or Medusa JWT.
+
+Broker mode needs server-side storage such as Upstash Redis.

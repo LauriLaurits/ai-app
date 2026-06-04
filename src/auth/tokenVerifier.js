@@ -1,4 +1,5 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
+import { getAccessTokenSession } from "../oauth/storage.js";
 
 let remoteJwks;
 const demoAllowedAdapters = new Set(["mock", "medusa"]);
@@ -100,6 +101,31 @@ export async function authenticateRequest(req, config) {
         shopIds: ["apotheka"],
       },
       scopes: [config.scopes.profileRead, config.scopes.ordersRead],
+      reason: null,
+    };
+  }
+
+  if (config.auth.mode === "broker") {
+    const session = await getAccessTokenSession(token);
+    if (!session) {
+      return {
+        status: "invalid",
+        identity: null,
+        scopes: [],
+        reason: "OAuth broker token is invalid or expired",
+      };
+    }
+
+    return {
+      status: "authenticated",
+      identity: {
+        userId: String(session.customerId),
+        displayName: String(session.displayName ?? "Customer"),
+        shopIds: ["medusa"],
+        medusaToken: session.medusaToken,
+        emailMasked: session.emailMasked ?? null,
+      },
+      scopes: Array.isArray(session.scopes) ? session.scopes : [],
       reason: null,
     };
   }
