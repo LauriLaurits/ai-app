@@ -48,6 +48,24 @@ function parseScopes(value) {
   return [...new Set(scopes.filter((scope) => scope !== "offline_access"))];
 }
 
+function isAllowedRedirectUri(value) {
+  if (config.broker.redirectUris.includes(value)) {
+    return true;
+  }
+
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      url.hostname === "chatgpt.com" &&
+      (url.pathname === "/connector_platform_oauth_redirect" ||
+        url.pathname.startsWith("/connector/oauth/"))
+    );
+  } catch {
+    return false;
+  }
+}
+
 function validateAuthorizationParams(params) {
   if (params.response_type !== "code") {
     return "Only response_type=code is supported.";
@@ -57,7 +75,7 @@ function validateAuthorizationParams(params) {
     return "Unknown OAuth client.";
   }
 
-  if (!config.broker.redirectUris.includes(params.redirect_uri)) {
+  if (!isAllowedRedirectUri(params.redirect_uri)) {
     return "Redirect URI is not allowed.";
   }
 

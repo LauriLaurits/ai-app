@@ -57,6 +57,7 @@ Redirect URI allowed by the broker:
 
 ```text
 https://chatgpt.com/connector_platform_oauth_redirect
+https://chatgpt.com/connector/oauth/...
 ```
 
 Scopes:
