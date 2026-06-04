@@ -82,6 +82,19 @@ PUBLIC_BASE_URL=https://your-project.vercel.app
 
 `AUTH_MODE=demo` intentionally returns the mock demo user without a bearer token. The code blocks demo auth when `SHOP_ADAPTER` is not `mock`, so it cannot be used with a real Apotheka adapter by accident.
 
+For a staging Medusa order demo, use a dedicated test customer and set:
+
+```text
+AUTH_MODE=demo
+SHOP_ADAPTER=medusa
+MEDUSA_BASE_URL=https://dev-medusa-ee.wolfgrouppartner.com
+MEDUSA_PUBLISHABLE_KEY=pk_...
+MEDUSA_CUSTOMER_EMAIL=customer@example.com
+MEDUSA_CUSTOMER_PASSWORD=<set only in Vercel env>
+```
+
+This is only for staging. Production should use OAuth/OIDC instead of shared customer credentials.
+
 After deployment, add this URL in ChatGPT developer mode:
 
 ```text

@@ -1,6 +1,7 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
 let remoteJwks;
+const demoAllowedAdapters = new Set(["mock", "medusa"]);
 
 function readAuthorizationHeader(req) {
   const value = req.headers.authorization;
@@ -30,12 +31,12 @@ export async function authenticateRequest(req, config) {
   const token = tokenFromRequest(req);
   if (!token) {
     if (config.auth.mode === "demo") {
-      if (config.shop.adapter !== "mock") {
+      if (!demoAllowedAdapters.has(config.shop.adapter)) {
         return {
           status: "invalid",
           identity: null,
           scopes: [],
-          reason: "Demo auth is only allowed with the mock shop adapter",
+          reason: "Demo auth is only allowed with staging-safe shop adapters",
         };
       }
 
@@ -82,12 +83,12 @@ export async function authenticateRequest(req, config) {
   }
 
   if (config.auth.mode === "demo") {
-    if (config.shop.adapter !== "mock") {
+    if (!demoAllowedAdapters.has(config.shop.adapter)) {
       return {
         status: "invalid",
         identity: null,
         scopes: [],
-        reason: "Demo auth is only allowed with the mock shop adapter",
+        reason: "Demo auth is only allowed with staging-safe shop adapters",
       };
     }
 

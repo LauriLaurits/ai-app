@@ -26,6 +26,13 @@ export const config = Object.freeze({
   shop: {
     adapter: process.env.SHOP_ADAPTER ?? "mock",
   },
+  medusa: {
+    baseUrl: normalizeBaseUrl(process.env.MEDUSA_BASE_URL ?? ""),
+    publishableKey: process.env.MEDUSA_PUBLISHABLE_KEY ?? "",
+    customerEmail: process.env.MEDUSA_CUSTOMER_EMAIL ?? "",
+    customerPassword: process.env.MEDUSA_CUSTOMER_PASSWORD ?? "",
+    tokenCacheMs: Number(process.env.MEDUSA_TOKEN_CACHE_MS ?? 20 * 60 * 1000),
+  },
   openObserve: {
     ingestUrl: process.env.OPENOBSERVE_INGEST_URL ?? "",
     authHeader: process.env.OPENOBSERVE_AUTH_HEADER ?? "",
