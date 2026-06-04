@@ -7,7 +7,6 @@ import { createAppLogger, hashUserId } from "./logging/logger.js";
 import { createShopAdapter } from "./shop/createShopAdapter.js";
 import { createWebshopMcpServer } from "./tools.js";
 
-const logger = createAppLogger(config);
 const shop = createShopAdapter(config);
 const mcpMethods = new Set(["POST", "GET", "DELETE"]);
 
@@ -75,10 +74,17 @@ export function handleProtectedResourceMetadataRequest(req, res) {
   writeJson(res, 200, protectedResourceMetadata());
 }
 
-export async function handleMcpRequest(req, res) {
+function requestHost(req) {
+  const forwardedHost = req.headers["x-forwarded-host"];
+  if (Array.isArray(forwardedHost)) return forwardedHost[0] ?? null;
+  return forwardedHost ?? req.headers.host ?? null;
+}
+
+export async function handleMcpRequest(req, res, options = {}) {
   const requestId = requestIdFrom(req);
   const startedAt = Date.now();
   const pathname = requestPath(req);
+  const logger = createAppLogger(config, { waitUntil: options.waitUntil });
   res.setHeader("X-Request-Id", requestId);
 
   if (req.method === "OPTIONS") {
@@ -97,6 +103,15 @@ export async function handleMcpRequest(req, res) {
 
   const auth = await authenticateRequest(req, config);
   const userIdHash = hashUserId(auth.identity?.userId);
+  const requestLogBase = {
+    requestId,
+    method: req.method,
+    path: pathname,
+    host: requestHost(req),
+    authStatus: auth.status,
+    userIdHash,
+    shopAdapter: config.shop.adapter,
+  };
   const mcpServer = createWebshopMcpServer({
     config,
     auth,
@@ -119,22 +134,14 @@ export async function handleMcpRequest(req, res) {
     await transport.handleRequest(req, res);
 
     logger.info("mcp_http_request", {
-      requestId,
-      method: req.method,
-      path: pathname,
+      ...requestLogBase,
       statusCode: res.statusCode,
       durationMs: Date.now() - startedAt,
-      authStatus: auth.status,
-      userIdHash,
     });
   } catch (error) {
     logger.error("mcp_http_request_failed", {
-      requestId,
-      method: req.method,
-      path: pathname,
+      ...requestLogBase,
       durationMs: Date.now() - startedAt,
-      authStatus: auth.status,
-      userIdHash,
       errorCode: "mcp_http_error",
       errorMessage: error instanceof Error ? error.message : "Unknown error",
     });

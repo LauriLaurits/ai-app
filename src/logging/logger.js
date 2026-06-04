@@ -28,10 +28,32 @@ function sanitize(value) {
 
 export function hashUserId(userId) {
   if (!userId) return null;
-  return crypto.createHash("sha256").update(String(userId)).digest("hex");
+  const salt = process.env.LOG_HASH_SALT ?? "";
+  return crypto
+    .createHash("sha256")
+    .update(`${salt}:${String(userId)}`)
+    .digest("hex");
 }
 
-export function createAppLogger(config) {
+export function createAppLogger(config, options = {}) {
+  const runtimeFields = {
+    serviceName: config.telemetry.serviceName,
+    serviceEnv: config.telemetry.serviceEnv,
+    gitSha: config.telemetry.gitSha,
+    deploymentUrl: config.telemetry.deploymentUrl,
+    vercelEnv: config.telemetry.vercelEnv,
+    vercelRegion: config.telemetry.vercelRegion,
+  };
+
+  function trackTask(promise) {
+    if (typeof options.waitUntil === "function") {
+      options.waitUntil(promise);
+      return;
+    }
+
+    void promise;
+  }
+
   async function sendToOpenObserve(event) {
     if (!config.openObserve.ingestUrl) return;
 
@@ -64,11 +86,12 @@ export function createAppLogger(config) {
     const event = sanitize({
       ts: new Date().toISOString(),
       event: eventName,
+      ...runtimeFields,
       ...payload,
     });
 
     logger[level](event, eventName);
-    void sendToOpenObserve(event);
+    trackTask(sendToOpenObserve(event));
   }
 
   return {

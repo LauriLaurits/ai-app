@@ -110,3 +110,5 @@ OPENOBSERVE_AUTH_HEADER=Basic ...
 ```
 
 The server logs request ids, tool names, user id hashes, status, latency, and upstream placeholders. It redacts tokens, passwords, authorization headers, secrets, and card-like fields.
+
+On Vercel, OpenObserve delivery uses `waitUntil()` so log shipping can complete after the MCP response is sent.
