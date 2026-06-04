@@ -1,4 +1,8 @@
 const port = Number(process.env.PORT ?? 8787);
+const authMode = process.env.AUTH_MODE ?? "mock";
+const publicBaseUrl = normalizeBaseUrl(
+  process.env.PUBLIC_BASE_URL ?? `http://localhost:${port}`
+);
 
 function normalizeBaseUrl(value) {
   return String(value).replace(/\/+$/, "");
@@ -7,16 +11,16 @@ function normalizeBaseUrl(value) {
 export const config = Object.freeze({
   port,
   mcpPath: process.env.MCP_PATH ?? "/mcp",
-  publicBaseUrl: normalizeBaseUrl(
-    process.env.PUBLIC_BASE_URL ?? `http://localhost:${port}`
-  ),
+  publicBaseUrl,
   auth: {
-    mode: process.env.AUTH_MODE ?? "mock",
+    mode: authMode,
     mockBearerToken: process.env.MOCK_BEARER_TOKEN ?? "dev-token",
-    issuer: process.env.OAUTH_ISSUER ?? "https://auth.yourcompany.example",
+    issuer:
+      process.env.OAUTH_ISSUER ??
+      (authMode === "broker" ? publicBaseUrl : "https://auth.yourcompany.example"),
     audience:
       process.env.OAUTH_AUDIENCE ??
-      normalizeBaseUrl(process.env.PUBLIC_BASE_URL ?? `http://localhost:${port}`),
+      publicBaseUrl,
     jwksUrl: process.env.OAUTH_JWKS_URL ?? "",
   },
   scopes: {
@@ -32,6 +36,26 @@ export const config = Object.freeze({
     customerEmail: process.env.MEDUSA_CUSTOMER_EMAIL ?? "",
     customerPassword: process.env.MEDUSA_CUSTOMER_PASSWORD ?? "",
     tokenCacheMs: Number(process.env.MEDUSA_TOKEN_CACHE_MS ?? 20 * 60 * 1000),
+  },
+  broker: {
+    clientId: process.env.OAUTH_BROKER_CLIENT_ID ?? "chatgpt",
+    redirectUris: (
+      process.env.OAUTH_BROKER_REDIRECT_URIS ??
+      "https://chatgpt.com/connector_platform_oauth_redirect"
+    )
+      .split(",")
+      .map((uri) => uri.trim())
+      .filter(Boolean),
+    codeTtlSec: Number(process.env.OAUTH_BROKER_CODE_TTL_SEC ?? 10 * 60),
+    accessTokenTtlSec: Number(process.env.OAUTH_BROKER_ACCESS_TOKEN_TTL_SEC ?? 60 * 60),
+    refreshTokenTtlSec: Number(
+      process.env.OAUTH_BROKER_REFRESH_TOKEN_TTL_SEC ?? 30 * 24 * 60 * 60
+    ),
+    storageNamespace: process.env.OAUTH_BROKER_STORAGE_NAMESPACE ?? "ai-app",
+  },
+  storage: {
+    upstashUrl: process.env.UPSTASH_REDIS_REST_URL ?? "",
+    upstashToken: process.env.UPSTASH_REDIS_REST_TOKEN ?? "",
   },
   openObserve: {
     ingestUrl: process.env.OPENOBSERVE_INGEST_URL ?? "",

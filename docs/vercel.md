@@ -71,3 +71,21 @@ OAUTH_ISSUER=https://auth.yourcompany.example
 OAUTH_AUDIENCE=https://your-project.vercel.app
 OAUTH_JWKS_URL=https://auth.yourcompany.example/.well-known/jwks.json
 ```
+
+## Broker Environment
+
+Use this when `ai-app` itself brokers ChatGPT OAuth and Medusa customer login:
+
+```text
+AUTH_MODE=broker
+SHOP_ADAPTER=medusa
+PUBLIC_BASE_URL=https://your-project.vercel.app
+MEDUSA_BASE_URL=https://dev-medusa-ee.wolfgrouppartner.com
+MEDUSA_PUBLISHABLE_KEY=pk_...
+OAUTH_BROKER_CLIENT_ID=chatgpt
+OAUTH_BROKER_REDIRECT_URIS=https://chatgpt.com/connector_platform_oauth_redirect
+UPSTASH_REDIS_REST_URL=...
+UPSTASH_REDIS_REST_TOKEN=...
+```
+
+Upstash Redis is required for broker mode on Vercel because authorization codes and access tokens must survive across serverless invocations.

@@ -115,20 +115,32 @@ export function createMedusaAdapter(config) {
   let cachedToken = null;
   let tokenExpiresAt = 0;
 
-  function assertConfigured() {
+  function assertBaseConfigured() {
     const missing = [];
     if (!baseUrl) missing.push("MEDUSA_BASE_URL");
     if (!config.medusa.publishableKey) missing.push("MEDUSA_PUBLISHABLE_KEY");
-    if (!config.medusa.customerEmail) missing.push("MEDUSA_CUSTOMER_EMAIL");
-    if (!config.medusa.customerPassword) missing.push("MEDUSA_CUSTOMER_PASSWORD");
 
     if (missing.length > 0) {
       throw new Error(`Missing Medusa configuration: ${missing.join(", ")}`);
     }
   }
 
+  function assertFallbackLoginConfigured() {
+    assertBaseConfigured();
+
+    const missing = [];
+    if (!config.medusa.customerEmail) missing.push("MEDUSA_CUSTOMER_EMAIL");
+    if (!config.medusa.customerPassword) missing.push("MEDUSA_CUSTOMER_PASSWORD");
+
+    if (missing.length > 0) {
+      throw new Error(
+        `Missing Medusa fallback login configuration: ${missing.join(", ")}`
+      );
+    }
+  }
+
   async function request(path, options = {}) {
-    assertConfigured();
+    assertBaseConfigured();
 
     const response = await fetch(`${baseUrl}${path}`, {
       ...options,
@@ -152,6 +164,8 @@ export function createMedusaAdapter(config) {
   }
 
   async function login() {
+    assertFallbackLoginConfigured();
+
     const body = await request("/auth/customer/emailpass", {
       method: "POST",
       body: JSON.stringify({
@@ -169,7 +183,11 @@ export function createMedusaAdapter(config) {
     return cachedToken;
   }
 
-  async function token() {
+  async function token(identity) {
+    if (identity?.medusaToken) {
+      return identity.medusaToken;
+    }
+
     if (cachedToken && Date.now() < tokenExpiresAt) {
       return cachedToken;
     }
@@ -177,8 +195,8 @@ export function createMedusaAdapter(config) {
     return login();
   }
 
-  async function storeRequest(path, options = {}) {
-    const bearer = await token();
+  async function storeRequest(path, options = {}, identity = null) {
+    const bearer = await token(identity);
 
     try {
       return await request(path, {
@@ -190,6 +208,10 @@ export function createMedusaAdapter(config) {
       });
     } catch (error) {
       if (!String(error?.message ?? "").includes("401")) {
+        throw error;
+      }
+
+      if (identity?.medusaToken) {
         throw error;
       }
 
@@ -207,8 +229,8 @@ export function createMedusaAdapter(config) {
   }
 
   return {
-    async getCurrentCustomer() {
-      const body = await storeRequest("/store/customers/me");
+    async getCurrentCustomer(identity) {
+      const body = await storeRequest("/store/customers/me", {}, identity);
       const customer = body?.customer ?? {};
 
       return {
@@ -220,7 +242,7 @@ export function createMedusaAdapter(config) {
       };
     },
 
-    async listOrders(_identity, filters = {}) {
+    async listOrders(identity, filters = {}) {
       const limit = Math.min(Math.max(Number(filters.limit ?? 10), 1), 25);
       const query = new URLSearchParams({
         limit: String(limit),
@@ -229,7 +251,7 @@ export function createMedusaAdapter(config) {
           "id,display_id,created_at,status,fulfillment_status,payment_status,currency_code,total,item_total,subtotal,items.*",
       });
 
-      const body = await storeRequest(`/store/orders?${query.toString()}`);
+      const body = await storeRequest(`/store/orders?${query.toString()}`, {}, identity);
       const status = filters.status;
       const orders = Array.isArray(body?.orders) ? body.orders : [];
 
@@ -246,8 +268,12 @@ export function createMedusaAdapter(config) {
         .map(toSummary);
     },
 
-    async getOrderDetails(_identity, id) {
-      const body = await storeRequest(`/store/orders/${encodeURIComponent(id)}`);
+    async getOrderDetails(identity, id) {
+      const body = await storeRequest(
+        `/store/orders/${encodeURIComponent(id)}`,
+        {},
+        identity
+      );
       return toDetails(body?.order ?? null);
     },
   };
