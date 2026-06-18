@@ -8,14 +8,10 @@ import {
   handleProtectedResourceMetadataRequest,
   isMcpPath,
 } from "./httpHandlers.js";
-import {
-  handleOAuthAuthorizeRequest,
-  handleOAuthLoginRequest,
-  handleOAuthMetadataRequest,
-  handleOAuthTokenRequest,
-} from "./oauth/handlers.js";
+import { createOAuthHandlers } from "./oauth/handlers.js";
 
 const logger = createAppLogger(config);
+const oauth = createOAuthHandlers(config);
 
 const httpServer = createServer(async (req, res) => {
   if (!req.url) {
@@ -30,34 +26,28 @@ const httpServer = createServer(async (req, res) => {
     return;
   }
 
-  if (
-    req.method === "GET" &&
-    url.pathname === "/.well-known/oauth-protected-resource"
-  ) {
+  if (req.method === "GET" && url.pathname === "/.well-known/oauth-protected-resource") {
     handleProtectedResourceMetadataRequest(req, res);
     return;
   }
 
-  if (
-    req.method === "GET" &&
-    url.pathname === "/.well-known/oauth-authorization-server"
-  ) {
-    handleOAuthMetadataRequest(req, res);
+  if (req.method === "GET" && url.pathname === "/.well-known/oauth-authorization-server") {
+    oauth.handleOAuthMetadataRequest(req, res);
     return;
   }
 
   if (url.pathname === "/oauth/authorize") {
-    handleOAuthAuthorizeRequest(req, res);
+    oauth.handleOAuthAuthorizeRequest(req, res);
     return;
   }
 
   if (url.pathname === "/oauth/login") {
-    await handleOAuthLoginRequest(req, res);
+    await oauth.handleOAuthLoginRequest(req, res);
     return;
   }
 
   if (url.pathname === "/oauth/token") {
-    await handleOAuthTokenRequest(req, res);
+    await oauth.handleOAuthTokenRequest(req, res);
     return;
   }
 

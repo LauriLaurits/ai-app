@@ -1,21 +1,75 @@
-function normalizeBaseUrl(value) {
-  return String(value ?? "").replace(/\/+$/, "");
+import {
+  customerDisplayName,
+  loginCustomer,
+  maskEmail,
+  MedusaAuthError,
+  medusaRequest,
+  type MedusaCustomer,
+} from "../../medusa/client.js";
+import type {
+  AppConfig,
+  Identity,
+  Money,
+  OrderDetails,
+  OrderFilters,
+  OrderItem,
+  OrderSummary,
+  ShopAdapter,
+} from "../../types.js";
+
+interface MedusaOrderItem {
+  sku?: string | null;
+  variant_sku?: string | null;
+  variant?: { sku?: string | null } | null;
+  product_title?: string | null;
+  title?: string | null;
+  variant_title?: string | null;
+  product?: { title?: string | null } | null;
+  quantity?: number | string;
+  unit_price?: number | string;
+  unitPrice?: number | string;
+  total?: number | string;
+  subtotal?: number | string;
 }
 
-function toNumber(value) {
+interface MedusaOrder {
+  id?: string | number;
+  display_id?: string | number;
+  order_id?: string | number;
+  status?: string;
+  fulfillment_status?: string;
+  fulfillmentStatus?: string;
+  payment_status?: string;
+  created_at?: string;
+  createdAt?: string;
+  order_date?: string;
+  total?: number | string;
+  item_total?: number | string;
+  subtotal?: number | string;
+  summary?: { total?: number | string };
+  currency_code?: string;
+  currency?: string;
+  items?: MedusaOrderItem[];
+  shipping_methods?: Array<{
+    name?: string | null;
+    shipping_option?: { name?: string | null } | null;
+  }>;
+}
+
+function toNumber(value: unknown): number {
   if (typeof value === "number") return value;
   if (typeof value === "string" && value.trim() !== "") return Number(value);
   return 0;
 }
 
-function money(amount, currencyCode) {
+function money(amount: unknown, currencyCode: unknown): Money {
   return {
     amount: toNumber(amount),
     currency: String(currencyCode ?? "EUR").toUpperCase(),
   };
 }
 
-function itemUnitPrice(item) {
+function itemUnitPrice(item: MedusaOrderItem): number | string {
   const quantity = Math.max(toNumber(item.quantity), 1);
   if (item.unit_price !== undefined) return item.unit_price;
   if (item.unitPrice !== undefined) return item.unitPrice;
@@ -24,42 +78,30 @@ function itemUnitPrice(item) {
   return 0;
 }
 
-function displayName(customer) {
-  const parts = [customer.first_name, customer.last_name].filter(Boolean);
-  return parts.length > 0 ? parts.join(" ") : "Customer";
-}
-
-function maskEmail(email) {
-  if (!email || !String(email).includes("@")) return null;
-  const [name, domain] = String(email).split("@");
-  const visible = name.slice(0, 2);
-  return `${visible}${"*".repeat(Math.max(name.length - visible.length, 3))}@${domain}`;
-}
-
-function orderId(order) {
+function orderId(order: MedusaOrder): string {
   return String(order.id ?? order.display_id ?? order.order_id);
 }
 
-function orderStatus(order) {
+function orderStatus(order: MedusaOrder): string {
   return String(order.status ?? "unknown");
 }
 
-function fulfillmentStatus(order) {
+function fulfillmentStatus(order: MedusaOrder): string {
   return String(order.fulfillment_status ?? order.fulfillmentStatus ?? "unknown");
 }
 
-function orderDate(order) {
+function orderDate(order: MedusaOrder): string {
   return String(order.created_at ?? order.createdAt ?? order.order_date ?? "");
 }
 
-function orderTotal(order) {
+function orderTotal(order: MedusaOrder): Money {
   return money(
     order.total ?? order.summary?.total ?? order.item_total ?? order.subtotal,
     order.currency_code ?? order.currency
   );
 }
 
-function orderItems(order) {
+function orderItems(order: MedusaOrder): OrderItem[] {
   const items = Array.isArray(order.items) ? order.items : [];
   const currency = order.currency_code ?? order.currency;
 
@@ -76,7 +118,7 @@ function orderItems(order) {
   }));
 }
 
-function delivery(order) {
+function delivery(order: MedusaOrder): OrderDetails["delivery"] {
   const shippingMethods = Array.isArray(order.shipping_methods)
     ? order.shipping_methods
     : [];
@@ -89,7 +131,7 @@ function delivery(order) {
   };
 }
 
-function toSummary(order) {
+function toSummary(order: MedusaOrder): OrderSummary {
   return {
     id: orderId(order),
     orderedAt: orderDate(order),
@@ -100,7 +142,7 @@ function toSummary(order) {
   };
 }
 
-function toDetails(order) {
+function toDetails(order: MedusaOrder | null): OrderDetails | null {
   if (!order) return null;
 
   return {
@@ -110,25 +152,12 @@ function toDetails(order) {
   };
 }
 
-export function createMedusaAdapter(config) {
-  const baseUrl = normalizeBaseUrl(config.medusa.baseUrl);
-  let cachedToken = null;
+export function createMedusaAdapter(config: AppConfig): ShopAdapter {
+  let cachedToken: string | null = null;
   let tokenExpiresAt = 0;
 
-  function assertBaseConfigured() {
-    const missing = [];
-    if (!baseUrl) missing.push("MEDUSA_BASE_URL");
-    if (!config.medusa.publishableKey) missing.push("MEDUSA_PUBLISHABLE_KEY");
-
-    if (missing.length > 0) {
-      throw new Error(`Missing Medusa configuration: ${missing.join(", ")}`);
-    }
-  }
-
-  function assertFallbackLoginConfigured() {
-    assertBaseConfigured();
-
-    const missing = [];
+  function assertFallbackLoginConfigured(): void {
+    const missing: string[] = [];
     if (!config.medusa.customerEmail) missing.push("MEDUSA_CUSTOMER_EMAIL");
     if (!config.medusa.customerPassword) missing.push("MEDUSA_CUSTOMER_PASSWORD");
 
@@ -139,51 +168,19 @@ export function createMedusaAdapter(config) {
     }
   }
 
-  async function request(path, options = {}) {
-    assertBaseConfigured();
-
-    const response = await fetch(`${baseUrl}${path}`, {
-      ...options,
-      headers: {
-        "content-type": "application/json",
-        "x-publishable-api-key": config.medusa.publishableKey,
-        ...options.headers,
-      },
-    });
-
-    const bodyText = await response.text();
-    const body = bodyText ? JSON.parse(bodyText) : null;
-
-    if (!response.ok) {
-      throw new Error(
-        `Medusa request failed: ${response.status} ${body?.message ?? response.statusText}`
-      );
-    }
-
-    return body;
-  }
-
-  async function login() {
+  async function login(): Promise<string> {
     assertFallbackLoginConfigured();
 
-    const body = await request("/auth/customer/emailpass", {
-      method: "POST",
-      body: JSON.stringify({
-        email: config.medusa.customerEmail,
-        password: config.medusa.customerPassword,
-      }),
-    });
-
-    if (!body?.token) {
-      throw new Error("Medusa login did not return a token");
-    }
-
-    cachedToken = body.token;
+    cachedToken = await loginCustomer(
+      config,
+      config.medusa.customerEmail,
+      config.medusa.customerPassword
+    );
     tokenExpiresAt = Date.now() + config.medusa.tokenCacheMs;
     return cachedToken;
   }
 
-  async function token(identity) {
+  async function token(identity: Identity | null): Promise<string> {
     if (identity?.medusaToken) {
       return identity.medusaToken;
     }
@@ -195,22 +192,21 @@ export function createMedusaAdapter(config) {
     return login();
   }
 
-  async function storeRequest(path, options = {}, identity = null) {
+  async function storeRequest<T>(
+    path: string,
+    identity: Identity | null
+  ): Promise<T> {
     const bearer = await token(identity);
 
     try {
-      return await request(path, {
-        ...options,
-        headers: {
-          Authorization: `Bearer ${bearer}`,
-          ...options.headers,
-        },
-      });
+      return await medusaRequest<T>(config, path, bearer);
     } catch (error) {
-      if (!String(error?.message ?? "").includes("401")) {
+      if (!(error instanceof MedusaAuthError)) {
         throw error;
       }
 
+      // Per-customer broker tokens cannot be re-minted here; the caller must
+      // surface an auth challenge so ChatGPT re-authenticates the user.
       if (identity?.medusaToken) {
         throw error;
       }
@@ -218,31 +214,28 @@ export function createMedusaAdapter(config) {
       cachedToken = null;
       tokenExpiresAt = 0;
       const freshBearer = await login();
-      return request(path, {
-        ...options,
-        headers: {
-          Authorization: `Bearer ${freshBearer}`,
-          ...options.headers,
-        },
-      });
+      return medusaRequest<T>(config, path, freshBearer);
     }
   }
 
   return {
     async getCurrentCustomer(identity) {
-      const body = await storeRequest("/store/customers/me", {}, identity);
+      const body = await storeRequest<{ customer?: MedusaCustomer }>(
+        "/store/customers/me",
+        identity
+      );
       const customer = body?.customer ?? {};
 
       return {
         id: String(customer.id ?? "unknown"),
-        displayName: displayName(customer),
+        displayName: customerDisplayName(customer),
         emailMasked: maskEmail(customer.email),
         loyaltyTier: null,
         defaultShop: "medusa",
       };
     },
 
-    async listOrders(identity, filters = {}) {
+    async listOrders(identity, filters: OrderFilters = {}) {
       const limit = Math.min(Math.max(Number(filters.limit ?? 10), 1), 25);
       const query = new URLSearchParams({
         limit: String(limit),
@@ -251,7 +244,10 @@ export function createMedusaAdapter(config) {
           "id,display_id,created_at,status,fulfillment_status,payment_status,currency_code,total,item_total,subtotal,items.*",
       });
 
-      const body = await storeRequest(`/store/orders?${query.toString()}`, {}, identity);
+      const body = await storeRequest<{ orders?: MedusaOrder[] }>(
+        `/store/orders?${query.toString()}`,
+        identity
+      );
       const status = filters.status;
       const orders = Array.isArray(body?.orders) ? body.orders : [];
 
@@ -269,9 +265,8 @@ export function createMedusaAdapter(config) {
     },
 
     async getOrderDetails(identity, id) {
-      const body = await storeRequest(
+      const body = await storeRequest<{ order?: MedusaOrder | null }>(
         `/store/orders/${encodeURIComponent(id)}`,
-        {},
         identity
       );
       return toDetails(body?.order ?? null);

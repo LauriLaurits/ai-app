@@ -1,0 +1,134 @@
+export interface AppConfig {
+  port: number;
+  mcpPath: string;
+  publicBaseUrl: string;
+  auth: {
+    mode: string;
+    mockBearerToken: string;
+    issuer: string;
+    audience: string;
+    jwksUrl: string;
+  };
+  scopes: {
+    profileRead: string;
+    ordersRead: string;
+  };
+  shop: {
+    adapter: string;
+  };
+  medusa: {
+    baseUrl: string;
+    publishableKey: string;
+    customerEmail: string;
+    customerPassword: string;
+    tokenCacheMs: number;
+  };
+  broker: {
+    clientId: string;
+    redirectUris: string[];
+    codeTtlSec: number;
+    accessTokenTtlSec: number;
+    refreshTokenTtlSec: number;
+    storageNamespace: string;
+  };
+  storage: {
+    upstashUrl: string;
+    upstashToken: string;
+  };
+  openObserve: {
+    ingestUrl: string;
+    authHeader: string;
+  };
+  telemetry: {
+    serviceName: string;
+    serviceEnv: string;
+    gitSha: string;
+    deploymentUrl: string;
+    vercelEnv: string | null;
+    vercelRegion: string | null;
+    hashSalt: string;
+  };
+}
+
+export interface Money {
+  amount: number;
+  currency: string;
+}
+
+export interface OrderItem {
+  sku: string | null;
+  name: string;
+  quantity: number;
+  unitPrice: Money;
+}
+
+export interface OrderSummary {
+  id: string;
+  orderedAt: string;
+  status: string;
+  fulfillment: string;
+  total: Money;
+  itemCount: number;
+}
+
+export interface OrderDelivery {
+  method: string;
+  status: string;
+  trackingCode: string | null;
+}
+
+export interface OrderDetails extends OrderSummary {
+  items: OrderItem[];
+  delivery: OrderDelivery;
+}
+
+export interface CustomerProfile {
+  id: string;
+  displayName: string;
+  emailMasked: string | null;
+  loyaltyTier: string | null;
+  defaultShop: string;
+}
+
+export interface OrderFilters {
+  status?: string;
+  limit?: number;
+}
+
+export interface Identity {
+  userId: string;
+  displayName: string;
+  shopIds: string[];
+  medusaToken?: string;
+  emailMasked?: string | null;
+}
+
+export type AuthStatus = "authenticated" | "missing" | "invalid";
+
+export interface AuthResult {
+  status: AuthStatus;
+  identity: Identity | null;
+  scopes: string[];
+  reason: string | null;
+}
+
+export interface ShopAdapter {
+  getCurrentCustomer(identity: Identity): Promise<CustomerProfile>;
+  listOrders(identity: Identity, filters?: OrderFilters): Promise<OrderSummary[]>;
+  getOrderDetails(identity: Identity, orderId: string): Promise<OrderDetails | null>;
+}
+
+export interface BrokerSession {
+  customerId: string;
+  displayName: string;
+  emailMasked: string | null;
+  scopes: string[];
+  medusaToken: string;
+  issuedAt?: string;
+}
+
+export interface AppLogger {
+  info(eventName: string, payload?: Record<string, unknown>): void;
+  warn(eventName: string, payload?: Record<string, unknown>): void;
+  error(eventName: string, payload?: Record<string, unknown>): void;
+}

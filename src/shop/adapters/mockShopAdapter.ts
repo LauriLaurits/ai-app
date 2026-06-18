@@ -1,4 +1,13 @@
-const customers = {
+import type {
+  CustomerProfile,
+  Identity,
+  OrderDetails,
+  OrderFilters,
+  OrderSummary,
+  ShopAdapter,
+} from "../../types.js";
+
+const customers: Record<string, CustomerProfile> = {
   "demo-user-1": {
     id: "customer-demo-1",
     displayName: "Demo Customer",
@@ -8,7 +17,7 @@ const customers = {
   },
 };
 
-const orders = {
+const orders: Record<string, OrderDetails[]> = {
   "demo-user-1": [
     {
       id: "APT-100045",
@@ -73,11 +82,11 @@ const orders = {
   ],
 };
 
-function currentOrders(identity) {
+function currentOrders(identity: Identity): OrderDetails[] {
   return orders[identity.userId] ?? [];
 }
 
-function toSummary(order) {
+function toSummary(order: OrderDetails): OrderSummary {
   return {
     id: order.id,
     orderedAt: order.orderedAt,
@@ -88,19 +97,21 @@ function toSummary(order) {
   };
 }
 
-export function createMockShopAdapter() {
+export function createMockShopAdapter(): ShopAdapter {
   return {
     async getCurrentCustomer(identity) {
-      return customers[identity.userId] ?? {
-        id: `customer-${identity.userId}`,
-        displayName: identity.displayName,
-        emailMasked: null,
-        loyaltyTier: null,
-        defaultShop: identity.shopIds[0] ?? "apotheka",
-      };
+      return (
+        customers[identity.userId] ?? {
+          id: `customer-${identity.userId}`,
+          displayName: identity.displayName,
+          emailMasked: null,
+          loyaltyTier: null,
+          defaultShop: identity.shopIds[0] ?? "apotheka",
+        }
+      );
     },
 
-    async listOrders(identity, filters = {}) {
+    async listOrders(identity, filters: OrderFilters = {}) {
       const limit = Math.min(Math.max(Number(filters.limit ?? 10), 1), 25);
       const status = filters.status;
 

@@ -18,6 +18,24 @@ ChatGPT
 
 The access token given to ChatGPT is opaque. It does not contain the Medusa JWT.
 
+## Session Lifetime
+
+- Broker access tokens live `OAUTH_BROKER_ACCESS_TOKEN_TTL_SEC` (default 1h).
+- Broker refresh tokens live `OAUTH_BROKER_REFRESH_TOKEN_TTL_SEC` (default 30d) and are single-use (rotated on every refresh).
+- When ChatGPT calls `/mcp` with a missing or expired token, the server replies `401` with a `WWW-Authenticate` challenge. ChatGPT then silently exchanges its refresh token — the user does not see a login screen.
+- On every `refresh_token` grant, the broker also rotates the stored Medusa customer JWT via `POST /auth/token/refresh`. Without this, Medusa JWTs (24h default) would expire while the broker session was still "valid" and every order call would fail.
+- If Medusa refuses to refresh (customer JWT already expired), the broker answers `invalid_grant`, which makes ChatGPT prompt the user to reconnect — a clean re-login instead of a dead "try again later" error.
+
+The practical consequence: the user stays logged in as long as ChatGPT refreshes at least once per Medusa JWT lifetime. To survive long idle gaps (e.g. a week of not using the app), raise the Medusa JWT lifetime in `medusa-config.ts`:
+
+```ts
+projectConfig: {
+  http: {
+    jwtExpiresIn: "30d",
+  },
+},
+```
+
 ## Required Vercel Env
 
 ```text
@@ -68,7 +86,7 @@ profile.read orders.read offline
 
 ## Storage
 
-Use Upstash Redis on Vercel. In-memory storage exists only for local development and is not reliable in serverless production.
+Use Upstash Redis on Vercel. In-memory storage exists only for local development; the server refuses to use it when `VERCEL` is set, because serverless instances are recycled constantly and sessions would silently disappear.
 
 Stored values:
 
