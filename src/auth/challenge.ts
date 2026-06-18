@@ -1,4 +1,15 @@
-export function buildWwwAuthenticate(config, scopes, options = {}) {
+import type { AppConfig, AuthResult, Identity } from "../types.js";
+
+export interface ChallengeOptions {
+  error?: string;
+  errorDescription?: string;
+}
+
+export function buildWwwAuthenticate(
+  config: AppConfig,
+  scopes: string[],
+  options: ChallengeOptions = {}
+): string {
   const params = [
     `resource_metadata="${config.publicBaseUrl}/.well-known/oauth-protected-resource"`,
   ];
@@ -18,7 +29,18 @@ export function buildWwwAuthenticate(config, scopes, options = {}) {
   return `Bearer ${params.join(", ")}`;
 }
 
-export function authErrorResult(config, scopes, reason) {
+export interface AuthErrorToolResult {
+  content: Array<{ type: "text"; text: string }>;
+  _meta: { "mcp/www_authenticate": string[] };
+  isError: true;
+  [key: string]: unknown;
+}
+
+export function authErrorResult(
+  config: AppConfig,
+  scopes: string[],
+  reason?: string | null
+): AuthErrorToolResult {
   const challenge = buildWwwAuthenticate(config, scopes, {
     error: "insufficient_scope",
     errorDescription: reason ?? "Login required to continue",
@@ -38,7 +60,15 @@ export function authErrorResult(config, scopes, reason) {
   };
 }
 
-export function requireScopes(config, auth, scopes) {
+export type ScopeCheck =
+  | { ok: true; identity: Identity }
+  | { ok: false; result: AuthErrorToolResult };
+
+export function requireScopes(
+  config: AppConfig,
+  auth: AuthResult,
+  scopes: string[]
+): ScopeCheck {
   if (!auth.identity) {
     return {
       ok: false,

@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import pino from "pino";
+import type { AppConfig, AppLogger } from "../types.js";
 
 const logger = pino({
   level: process.env.LOG_LEVEL ?? "info",
@@ -9,7 +10,7 @@ const logger = pino({
 const sensitiveKeyPattern =
   /authorization|password|passwd|secret|token|card|cvv|iban|refresh/i;
 
-function sanitize(value) {
+function sanitize(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map((item) => sanitize(item));
   }
@@ -26,7 +27,7 @@ function sanitize(value) {
   return value;
 }
 
-export function hashUserId(userId) {
+export function hashUserId(userId: string | null | undefined): string | null {
   if (!userId) return null;
   const salt = process.env.LOG_HASH_SALT ?? "";
   return crypto
@@ -35,7 +36,11 @@ export function hashUserId(userId) {
     .digest("hex");
 }
 
-export function createAppLogger(config, options = {}) {
+export interface LoggerOptions {
+  waitUntil?: (promise: Promise<unknown>) => void;
+}
+
+export function createAppLogger(config: AppConfig, options: LoggerOptions = {}): AppLogger {
   const runtimeFields = {
     serviceName: config.telemetry.serviceName,
     serviceEnv: config.telemetry.serviceEnv,
@@ -45,7 +50,7 @@ export function createAppLogger(config, options = {}) {
     vercelRegion: config.telemetry.vercelRegion,
   };
 
-  function trackTask(promise) {
+  function trackTask(promise: Promise<unknown>): void {
     if (typeof options.waitUntil === "function") {
       options.waitUntil(promise);
       return;
@@ -54,10 +59,10 @@ export function createAppLogger(config, options = {}) {
     void promise;
   }
 
-  async function sendToOpenObserve(event) {
+  async function sendToOpenObserve(event: Record<string, unknown>): Promise<void> {
     if (!config.openObserve.ingestUrl) return;
 
-    const headers = {
+    const headers: Record<string, string> = {
       "content-type": "application/json",
     };
 
@@ -82,13 +87,17 @@ export function createAppLogger(config, options = {}) {
     }
   }
 
-  function emit(level, eventName, payload = {}) {
+  function emit(
+    level: "info" | "warn" | "error",
+    eventName: string,
+    payload: Record<string, unknown> = {}
+  ): void {
     const event = sanitize({
       ts: new Date().toISOString(),
       event: eventName,
       ...runtimeFields,
       ...payload,
-    });
+    }) as Record<string, unknown>;
 
     logger[level](event, eventName);
     trackTask(sendToOpenObserve(event));

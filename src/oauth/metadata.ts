@@ -1,4 +1,6 @@
-export function oauthMetadata(config) {
+import type { AppConfig } from "../types.js";
+
+export function oauthMetadata(config: AppConfig): Record<string, unknown> {
   const issuer = config.auth.issuer;
 
   return {

@@ -1,6 +1,6 @@
 # Webshop ChatGPT MCP
 
-Standalone MCP server starter for a ChatGPT app that can authenticate a webshop user and read their orders.
+Standalone TypeScript MCP server for a ChatGPT app that can authenticate a webshop user and read their orders.
 
 This project intentionally works before the Apotheka repo is available. It ships with a mock shop adapter and the same MCP tool contracts we can later connect to Apotheka APIs.
 
@@ -8,6 +8,7 @@ This project intentionally works before the Apotheka repo is available. It ships
 
 - `/mcp` streamable HTTP MCP endpoint for ChatGPT.
 - OAuth protected resource metadata at `/.well-known/oauth-protected-resource`.
+- OAuth broker that logs Medusa customers in and keeps their session alive via refresh-token rotation (see [docs/oauth-broker.md](docs/oauth-broker.md)).
 - Read-only MCP tools:
   - `get_current_customer`
   - `list_orders`
@@ -23,6 +24,14 @@ This project intentionally works before the Apotheka repo is available. It ships
 cp .env.example .env
 npm install
 npm run dev
+```
+
+## Develop
+
+```bash
+npm run typecheck   # strict TypeScript check
+npm test            # vitest suite (OAuth flow, tools, adapters, storage)
+npm run build       # compile to dist/ (used by Docker / npm start)
 ```
 
 Local MCP endpoint:
