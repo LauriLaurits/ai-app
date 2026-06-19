@@ -80,6 +80,8 @@ async function runTool(
     inputShape: Object.fromEntries(Object.keys(args ?? {}).map((key) => [key, true])),
   });
 
+  const payloadMode = context.config.logging.payloadMode;
+
   try {
     const result = await run();
     logger.info("mcp_tool_finished", {
@@ -88,6 +90,12 @@ async function runTool(
       userIdHash,
       isError: Boolean(result?.isError),
       durationMs: Date.now() - startedAt,
+      // Full request/response capture is opt-in (LOG_PAYLOAD_MODE=all) because
+      // the result contains customer order data (PII). The logger redacts
+      // credential-like keys regardless.
+      ...(payloadMode === "all"
+        ? { arguments: args ?? {}, result: result?.structuredContent }
+        : {}),
     });
     return result;
   } catch (error) {
@@ -98,6 +106,9 @@ async function runTool(
       durationMs: Date.now() - startedAt,
       errorCode: error instanceof MedusaAuthError ? "shop_session_expired" : "tool_error",
       errorMessage: error instanceof Error ? error.message : "Unknown error",
+      // On failure, capture the inputs in "error" and "all" modes to make
+      // "things went south" investigations possible.
+      ...(payloadMode !== "off" ? { arguments: args ?? {} } : {}),
     });
 
     if (error instanceof MedusaAuthError) {

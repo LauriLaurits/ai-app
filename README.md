@@ -149,4 +149,14 @@ OPENOBSERVE_AUTH_HEADER=Basic ...
 
 The server logs request ids, tool names, user id hashes, status, latency, and upstream placeholders. It redacts tokens, passwords, authorization headers, secrets, and card-like fields.
 
+### Payload logging
+
+By default the server does **not** log tool argument values or returned data, to keep customer PII out of logs. Control this with `LOG_PAYLOAD_MODE`:
+
+- `off` — never log argument values or returned data.
+- `error` — log argument values **only when a tool fails** (default). Best for investigating "things went south" without storing PII during normal use.
+- `all` — log argument values **and** returned data on every call. The returned data contains customer order details (PII), so use this only for active debugging and turn it off afterwards.
+
+Credential-like fields are redacted in every mode. These events show up as `mcp_tool_finished` (with `arguments`/`result` in `all` mode) and `mcp_tool_failed` (with `arguments` in `error`/`all` modes), correlated by `requestId`.
+
 On Vercel, OpenObserve delivery uses `waitUntil()` so log shipping can complete after the MCP response is sent.
