@@ -148,17 +148,21 @@ export function createMedusaAdapter(config: AppConfig): ShopAdapter {
 
     async searchProducts(query: ProductSearchQuery = {}) {
       const limit = Math.min(Math.max(Number(query.limit ?? 10), 1), 25);
+      const offset = Math.max(Number(query.offset ?? 0), 0);
       const params = new URLSearchParams({
         limit: String(limit),
-        offset: "0",
+        offset: String(offset),
         fields: PRODUCT_FIELDS,
       });
       if (query.query) params.set("q", query.query);
-      const body = await publicRequest<{ products?: MedusaProduct[] }>(
+      const body = await publicRequest<{ products?: MedusaProduct[]; count?: number }>(
         `/store/products?${params.toString()}${regionQuery()}`
       );
       const products = Array.isArray(body?.products) ? body.products : [];
-      return products.map(productToSummary);
+      return {
+        products: products.map(productToSummary),
+        count: Number(body?.count ?? products.length),
+      };
     },
 
     async getProduct(id) {

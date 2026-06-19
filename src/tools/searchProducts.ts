@@ -10,20 +10,26 @@ export function registerSearchProducts(server: McpServer, ctx: ToolContext): voi
   server.registerTool(
     "search_products",
     {
-      title: "Search products",
+      title: "Search or list products",
       description:
-        "Searches the webshop catalog. Returns product summaries with price and stock status.",
+        "Searches the webshop catalog, or lists all products when 'query' is omitted. " +
+        "Returns product summaries with price and stock, plus the total 'count'. " +
+        "Use 'limit' and 'offset' to page through the full catalog.",
       inputSchema: {
         query: z.string().optional(),
         limit: z.number().int().min(1).max(25).optional(),
+        offset: z.number().int().min(0).optional(),
       },
-      outputSchema: { products: z.array(productSummarySchema) },
+      outputSchema: {
+        products: z.array(productSummarySchema),
+        count: z.number(),
+      },
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async (args) =>
       runTool(ctx, "search_products", args, scopes, async () => {
-        const products = await ctx.shop.searchProducts(args);
-        return jsonResult({ products });
+        const { products, count } = await ctx.shop.searchProducts(args);
+        return jsonResult({ products, count });
       })
   );
 }

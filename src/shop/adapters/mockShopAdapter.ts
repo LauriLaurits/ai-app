@@ -202,11 +202,15 @@ export function createMockShopAdapter(): ShopAdapter {
 
     async searchProducts(query: ProductSearchQuery = {}) {
       const limit = Math.min(Math.max(Number(query.limit ?? 10), 1), 25);
+      const offset = Math.max(Number(query.offset ?? 0), 0);
       const term = query.query?.toLowerCase();
-      return products
-        .filter((product) => !term || product.title.toLowerCase().includes(term))
-        .slice(0, limit)
-        .map(toProductSummary);
+      const matched = products.filter(
+        (product) => !term || product.title.toLowerCase().includes(term)
+      );
+      return {
+        products: matched.slice(offset, offset + limit).map(toProductSummary),
+        count: matched.length,
+      };
     },
 
     async getProduct(id) {

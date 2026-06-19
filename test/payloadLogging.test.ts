@@ -58,7 +58,7 @@ function workingShop(): ShopAdapter {
       return null;
     },
     async searchProducts() {
-      return [];
+      return { products: [], count: 0 };
     },
     async getProduct() {
       return null;
