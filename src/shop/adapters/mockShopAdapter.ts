@@ -4,6 +4,10 @@ import type {
   OrderDetails,
   OrderFilters,
   OrderSummary,
+  OrderTracking,
+  ProductDetails,
+  ProductSearchQuery,
+  ProductSummary,
   ShopAdapter,
 } from "../../types.js";
 
@@ -82,8 +86,74 @@ const orders: Record<string, OrderDetails[]> = {
   ],
 };
 
+const products: ProductDetails[] = [
+  {
+    id: "prod_demo_vitamin_d",
+    title: "Vitamin D supplement",
+    handle: "vitamin-d",
+    thumbnail: null,
+    price: { amount: 12.9, currency: "EUR" },
+    inStock: true,
+    description: "Daily vitamin D3 supplement.",
+    variants: [
+      {
+        id: "var_demo_vit_d_60",
+        title: "60 tablets",
+        sku: "demo-vit-d",
+        price: { amount: 12.9, currency: "EUR" },
+        inStock: true,
+      },
+    ],
+  },
+  {
+    id: "prod_demo_toothpaste",
+    title: "Sensitive toothpaste",
+    handle: "sensitive-toothpaste",
+    thumbnail: null,
+    price: { amount: 6.4, currency: "EUR" },
+    inStock: false,
+    description: "Toothpaste for sensitive teeth.",
+    variants: [
+      {
+        id: "var_demo_toothpaste",
+        title: "75ml",
+        sku: "demo-toothpaste",
+        price: { amount: 6.4, currency: "EUR" },
+        inStock: false,
+      },
+    ],
+  },
+];
+
 function currentOrders(identity: Identity): OrderDetails[] {
   return orders[identity.userId] ?? [];
+}
+
+function toProductSummary(product: ProductDetails): ProductSummary {
+  return {
+    id: product.id,
+    title: product.title,
+    handle: product.handle,
+    thumbnail: product.thumbnail,
+    price: product.price,
+    inStock: product.inStock,
+  };
+}
+
+function toTracking(order: OrderDetails): OrderTracking {
+  return {
+    orderId: order.id,
+    fulfillment: order.fulfillment,
+    shipments: [
+      {
+        status: order.delivery.status,
+        trackingNumber: order.delivery.trackingCode,
+        trackingUrl: null,
+        shippedAt: null,
+        deliveredAt: null,
+      },
+    ],
+  };
 }
 
 function toSummary(order: OrderDetails): OrderSummary {
@@ -123,6 +193,24 @@ export function createMockShopAdapter(): ShopAdapter {
 
     async getOrderDetails(identity, orderId) {
       return currentOrders(identity).find((order) => order.id === orderId) ?? null;
+    },
+
+    async getOrderTracking(identity, orderId) {
+      const order = currentOrders(identity).find((entry) => entry.id === orderId);
+      return order ? toTracking(order) : null;
+    },
+
+    async searchProducts(query: ProductSearchQuery = {}) {
+      const limit = Math.min(Math.max(Number(query.limit ?? 10), 1), 25);
+      const term = query.query?.toLowerCase();
+      return products
+        .filter((product) => !term || product.title.toLowerCase().includes(term))
+        .slice(0, limit)
+        .map(toProductSummary);
+    },
+
+    async getProduct(id) {
+      return products.find((product) => product.id === id) ?? null;
     },
   };
 }

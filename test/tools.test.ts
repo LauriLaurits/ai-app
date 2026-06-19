@@ -2,7 +2,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { describe, expect, it } from "vitest";
 import { MedusaAuthError } from "../src/medusa/client.js";
-import { createWebshopMcpServer } from "../src/tools.js";
+import { createWebshopMcpServer } from "../src/tools/index.js";
 import type { AppLogger, AuthResult, ShopAdapter } from "../src/types.js";
 import { makeConfig } from "./helpers.js";
 
@@ -52,6 +52,36 @@ function workingShop(): ShopAdapter {
     async getOrderDetails() {
       return null;
     },
+    async getOrderTracking() {
+      return {
+        orderId: "order_1",
+        fulfillment: "partially_fulfilled",
+        shipments: [
+          {
+            status: "shipped",
+            trackingNumber: "TRK123",
+            trackingUrl: "https://track.example/TRK123",
+            shippedAt: "2026-04-29T00:00:00.000Z",
+            deliveredAt: null,
+          },
+        ],
+      };
+    },
+    async searchProducts() {
+      return [
+        {
+          id: "prod_1",
+          title: "Vitamin D supplement",
+          handle: "vitamin-d",
+          thumbnail: null,
+          price: { amount: 12.9, currency: "EUR" },
+          inStock: true,
+        },
+      ];
+    },
+    async getProduct() {
+      return null;
+    },
   };
 }
 
@@ -59,10 +89,21 @@ function expiredShop(): ShopAdapter {
   const fail = async (): Promise<never> => {
     throw new MedusaAuthError("Unauthorized");
   };
-  return { getCurrentCustomer: fail, listOrders: fail, getOrderDetails: fail };
+  return {
+    getCurrentCustomer: fail,
+    listOrders: fail,
+    getOrderDetails: fail,
+    getOrderTracking: fail,
+    searchProducts: fail,
+    getProduct: fail,
+  };
 }
 
-async function callTool(auth: AuthResult, shop: ShopAdapter, name: string) {
+async function withClient<T>(
+  auth: AuthResult,
+  shop: ShopAdapter,
+  fn: (client: Client) => Promise<T>
+): Promise<T> {
   const server = createWebshopMcpServer({
     config,
     auth,
@@ -75,11 +116,23 @@ async function callTool(auth: AuthResult, shop: ShopAdapter, name: string) {
 
   await server.connect(serverTransport);
   await client.connect(clientTransport);
+  try {
+    return await fn(client);
+  } finally {
+    await client.close();
+    await server.close();
+  }
+}
 
-  const result = await client.callTool({ name, arguments: {} });
-
-  await client.close();
-  await server.close();
+async function callTool(
+  auth: AuthResult,
+  shop: ShopAdapter,
+  name: string,
+  args: Record<string, unknown> = {}
+) {
+  const result = await withClient(auth, shop, (client) =>
+    client.callTool({ name, arguments: args })
+  );
 
   return result as {
     isError?: boolean;
@@ -90,12 +143,49 @@ async function callTool(auth: AuthResult, shop: ShopAdapter, name: string) {
 }
 
 describe("MCP tools", () => {
+  it("registers the full tool set", async () => {
+    const names = await withClient(authenticated, workingShop(), async (client) => {
+      const { tools } = await client.listTools();
+      return tools.map((tool) => tool.name).sort();
+    });
+
+    expect(names).toEqual([
+      "get_current_customer",
+      "get_order_details",
+      "get_product",
+      "list_orders",
+      "search_products",
+      "track_shipment",
+    ]);
+  });
+
   it("returns orders for an authenticated customer", async () => {
     const result = await callTool(authenticated, workingShop(), "list_orders");
 
     expect(result.isError).toBeFalsy();
     const orders = (result.structuredContent as { orders: unknown[] }).orders;
     expect(orders).toHaveLength(1);
+  });
+
+  it("returns catalog products from search_products", async () => {
+    const result = await callTool(authenticated, workingShop(), "search_products", {
+      query: "vitamin",
+    });
+
+    expect(result.isError).toBeFalsy();
+    const products = (result.structuredContent as { products: unknown[] }).products;
+    expect(products).toHaveLength(1);
+  });
+
+  it("returns shipment tracking from track_shipment", async () => {
+    const result = await callTool(authenticated, workingShop(), "track_shipment", {
+      orderId: "order_1",
+    });
+
+    expect(result.isError).toBeFalsy();
+    const tracking = (result.structuredContent as { tracking: { shipments: unknown[] } })
+      .tracking;
+    expect(tracking.shipments).toHaveLength(1);
   });
 
   it("returns an auth challenge when no identity is present", async () => {

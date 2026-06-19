@@ -48,6 +48,7 @@ export const config: AppConfig = Object.freeze({
     customerEmail: process.env.MEDUSA_CUSTOMER_EMAIL ?? "",
     customerPassword: process.env.MEDUSA_CUSTOMER_PASSWORD ?? "",
     tokenCacheMs: Number(process.env.MEDUSA_TOKEN_CACHE_MS ?? 20 * 60 * 1000),
+    regionId: process.env.MEDUSA_REGION_ID ?? "",
   },
   broker: {
     clientId: process.env.OAUTH_BROKER_CLIENT_ID ?? "chatgpt",

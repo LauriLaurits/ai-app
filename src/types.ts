@@ -25,6 +25,7 @@ export interface AppConfig {
     customerEmail: string;
     customerPassword: string;
     tokenCacheMs: number;
+    regionId: string;
   };
   broker: {
     clientId: string;
@@ -103,6 +104,47 @@ export interface OrderFilters {
   limit?: number;
 }
 
+export interface ShipmentTracking {
+  status: string;
+  trackingNumber: string | null;
+  trackingUrl: string | null;
+  shippedAt: string | null;
+  deliveredAt: string | null;
+}
+
+export interface OrderTracking {
+  orderId: string;
+  fulfillment: string;
+  shipments: ShipmentTracking[];
+}
+
+export interface ProductVariantInfo {
+  id: string;
+  title: string;
+  sku: string | null;
+  price: Money | null;
+  inStock: boolean;
+}
+
+export interface ProductSummary {
+  id: string;
+  title: string;
+  handle: string | null;
+  thumbnail: string | null;
+  price: Money | null;
+  inStock: boolean;
+}
+
+export interface ProductDetails extends ProductSummary {
+  description: string | null;
+  variants: ProductVariantInfo[];
+}
+
+export interface ProductSearchQuery {
+  query?: string;
+  limit?: number;
+}
+
 export interface Identity {
   userId: string;
   displayName: string;
@@ -124,6 +166,9 @@ export interface ShopAdapter {
   getCurrentCustomer(identity: Identity): Promise<CustomerProfile>;
   listOrders(identity: Identity, filters?: OrderFilters): Promise<OrderSummary[]>;
   getOrderDetails(identity: Identity, orderId: string): Promise<OrderDetails | null>;
+  getOrderTracking(identity: Identity, orderId: string): Promise<OrderTracking | null>;
+  searchProducts(query: ProductSearchQuery): Promise<ProductSummary[]>;
+  getProduct(id: string): Promise<ProductDetails | null>;
 }
 
 export interface BrokerSession {

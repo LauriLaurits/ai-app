@@ -69,4 +69,58 @@ describe("medusa adapter", () => {
       adapter.listOrders({ userId: "x", displayName: "X", shopIds: ["medusa"] })
     ).rejects.toThrow(/MEDUSA_CUSTOMER_EMAIL/);
   });
+
+  it("normalizes line-item prices from minor units", async () => {
+    const adapter = createMedusaAdapter(config);
+    const details = await adapter.getOrderDetails(identity, "order_1");
+
+    expect(details?.items[0]?.unitPrice).toEqual({ amount: 59.46, currency: "EUR" });
+  });
+
+  it("maps shipment tracking from order fulfillments", async () => {
+    const adapter = createMedusaAdapter(config);
+    const tracking = await adapter.getOrderTracking(identity, "order_1");
+
+    expect(tracking?.orderId).toBe("order_1");
+    expect(tracking?.shipments).toEqual([
+      {
+        status: "shipped",
+        trackingNumber: "TRK123",
+        trackingUrl: "https://track.example/TRK123",
+        shippedAt: "2026-04-29T00:00:00.000Z",
+        deliveredAt: null,
+      },
+    ]);
+  });
+
+  it("searches products with normalized price and stock (public, no token)", async () => {
+    state.liveTokens.clear(); // catalog must not require a customer token
+    const adapter = createMedusaAdapter(config);
+    const products = await adapter.searchProducts({ query: "vitamin" });
+
+    expect(products).toEqual([
+      {
+        id: "prod_1",
+        title: "Vitamin D supplement",
+        handle: "vitamin-d",
+        thumbnail: null,
+        price: { amount: 12.9, currency: "EUR" },
+        inStock: true,
+      },
+    ]);
+  });
+
+  it("returns product details with variants", async () => {
+    const adapter = createMedusaAdapter(config);
+    const product = await adapter.getProduct("prod_1");
+
+    expect(product?.description).toBe("Daily vitamin D3.");
+    expect(product?.variants[0]).toEqual({
+      id: "var_1",
+      title: "60 tablets",
+      sku: "vd-60",
+      price: { amount: 12.9, currency: "EUR" },
+      inStock: true,
+    });
+  });
 });
