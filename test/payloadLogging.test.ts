@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { describe, expect, it } from "vitest";
-import { createWebshopMcpServer } from "../src/tools.js";
+import { createWebshopMcpServer } from "../src/tools/index.js";
 import type { AppConfig, AppLogger, AuthResult, ShopAdapter } from "../src/types.js";
 import { makeConfig } from "./helpers.js";
 
@@ -52,6 +52,15 @@ function workingShop(): ShopAdapter {
       ];
     },
     async getOrderDetails() {
+      return null;
+    },
+    async getOrderTracking() {
+      return null;
+    },
+    async searchProducts() {
+      return [];
+    },
+    async getProduct() {
       return null;
     },
   };

@@ -10,9 +10,12 @@ This project intentionally works before the Apotheka repo is available. It ships
 - OAuth protected resource metadata at `/.well-known/oauth-protected-resource`.
 - OAuth broker that logs Medusa customers in and keeps their session alive via refresh-token rotation (see [docs/oauth-broker.md](docs/oauth-broker.md)).
 - Read-only MCP tools:
-  - `get_current_customer`
-  - `list_orders`
-  - `get_order_details`
+  - `get_current_customer` — authenticated customer's profile
+  - `list_orders` — recent order summaries
+  - `get_order_details` — line items, total, delivery for one order
+  - `track_shipment` — shipment status, tracking number and link for one order
+  - `search_products` — catalog search with price and stock
+  - `get_product` — full product details and per-variant price/stock
 - Mock auth mode for local development.
 - JWT verification mode for staging/production.
 - Structured request and tool logging.

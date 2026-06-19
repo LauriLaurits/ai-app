@@ -26,6 +26,7 @@ export function makeConfig(overrides: DeepPartial<AppConfig> = {}): AppConfig {
       customerEmail: "",
       customerPassword: "",
       tokenCacheMs: 20 * 60 * 1000,
+      regionId: "reg_test",
     },
     broker: {
       clientId: "chatgpt",
@@ -163,6 +164,7 @@ export interface MedusaFetchState {
   refreshCount: number;
   customer: Record<string, unknown>;
   orders: Array<Record<string, unknown>>;
+  products: Array<Record<string, unknown>>;
 }
 
 export function makeMedusaFetchState(): MedusaFetchState {
@@ -176,6 +178,7 @@ export function makeMedusaFetchState(): MedusaFetchState {
       last_name: "Laurits",
       email: "lauri@example.com",
     },
+    // Amounts are in Medusa minor units (cents): 29731 = €297.31.
     orders: [
       {
         id: "order_1",
@@ -184,8 +187,36 @@ export function makeMedusaFetchState(): MedusaFetchState {
         status: "pending",
         fulfillment_status: "partially_fulfilled",
         currency_code: "eur",
-        total: 297.31,
-        items: [{ title: "Item", quantity: 5, unit_price: 59.46 }],
+        total: 29731,
+        items: [{ title: "Item", quantity: 5, unit_price: 5946 }],
+        fulfillments: [
+          {
+            labels: [
+              { tracking_number: "TRK123", tracking_url: "https://track.example/TRK123" },
+            ],
+            shipped_at: "2026-04-29T00:00:00.000Z",
+            delivered_at: null,
+          },
+        ],
+      },
+    ],
+    products: [
+      {
+        id: "prod_1",
+        title: "Vitamin D supplement",
+        handle: "vitamin-d",
+        thumbnail: null,
+        description: "Daily vitamin D3.",
+        variants: [
+          {
+            id: "var_1",
+            title: "60 tablets",
+            sku: "vd-60",
+            manage_inventory: true,
+            inventory_quantity: 5,
+            calculated_price: { calculated_amount: 1290, currency_code: "eur" },
+          },
+        ],
       },
     ],
   };
@@ -222,6 +253,17 @@ export function makeMedusaFetch(state: MedusaFetchState): typeof fetch {
       const next = `medusa-jwt-refreshed-${state.refreshCount}`;
       state.liveTokens.add(next);
       return json(200, { token: next });
+    }
+
+    // Catalog routes are public (publishable key, no customer token).
+    if (url.pathname === "/store/products") {
+      return json(200, { products: state.products });
+    }
+
+    if (url.pathname.startsWith("/store/products/")) {
+      const id = decodeURIComponent(url.pathname.split("/").pop() ?? "");
+      const product = state.products.find((entry) => String(entry.id) === id) ?? null;
+      return json(200, { product });
     }
 
     if (!state.liveTokens.has(bearer)) {

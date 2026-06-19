@@ -6,7 +6,7 @@ import { buildWwwAuthenticate } from "./auth/challenge.js";
 import { config } from "./config.js";
 import { createAppLogger, hashUserId } from "./logging/logger.js";
 import { createShopAdapter } from "./shop/createShopAdapter.js";
-import { createWebshopMcpServer } from "./tools.js";
+import { createWebshopMcpServer } from "./tools/index.js";
 
 const shop = createShopAdapter(config);
 const mcpMethods = new Set(["POST", "GET", "DELETE"]);
