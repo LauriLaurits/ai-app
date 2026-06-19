@@ -96,9 +96,10 @@ describe("medusa adapter", () => {
   it("searches products with normalized price and stock (public, no token)", async () => {
     state.liveTokens.clear(); // catalog must not require a customer token
     const adapter = createMedusaAdapter(config);
-    const products = await adapter.searchProducts({ query: "vitamin" });
+    const result = await adapter.searchProducts({ query: "vitamin" });
 
-    expect(products).toEqual([
+    expect(result.count).toBe(1);
+    expect(result.products).toEqual([
       {
         id: "prod_1",
         title: "Vitamin D supplement",

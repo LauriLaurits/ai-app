@@ -68,16 +68,19 @@ function workingShop(): ShopAdapter {
       };
     },
     async searchProducts() {
-      return [
-        {
-          id: "prod_1",
-          title: "Vitamin D supplement",
-          handle: "vitamin-d",
-          thumbnail: null,
-          price: { amount: 12.9, currency: "EUR" },
-          inStock: true,
-        },
-      ];
+      return {
+        products: [
+          {
+            id: "prod_1",
+            title: "Vitamin D supplement",
+            handle: "vitamin-d",
+            thumbnail: null,
+            price: { amount: 12.9, currency: "EUR" },
+            inStock: true,
+          },
+        ],
+        count: 1,
+      };
     },
     async getProduct() {
       return null;

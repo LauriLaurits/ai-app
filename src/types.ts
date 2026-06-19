@@ -143,6 +143,12 @@ export interface ProductDetails extends ProductSummary {
 export interface ProductSearchQuery {
   query?: string;
   limit?: number;
+  offset?: number;
+}
+
+export interface ProductSearchResult {
+  products: ProductSummary[];
+  count: number;
 }
 
 export interface Identity {
@@ -167,7 +173,7 @@ export interface ShopAdapter {
   listOrders(identity: Identity, filters?: OrderFilters): Promise<OrderSummary[]>;
   getOrderDetails(identity: Identity, orderId: string): Promise<OrderDetails | null>;
   getOrderTracking(identity: Identity, orderId: string): Promise<OrderTracking | null>;
-  searchProducts(query: ProductSearchQuery): Promise<ProductSummary[]>;
+  searchProducts(query: ProductSearchQuery): Promise<ProductSearchResult>;
   getProduct(id: string): Promise<ProductDetails | null>;
 }
 
