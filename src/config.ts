@@ -10,6 +10,15 @@ function normalizeBaseUrl(value: string): string {
   return value.replace(/\/+$/, "");
 }
 
+function normalizePayloadMode(value: string | undefined): "off" | "error" | "all" {
+  if (value === "all" || value === "error" || value === "off") {
+    return value;
+  }
+  // Default: capture payloads only when a tool fails, to keep PII out of logs
+  // during normal operation.
+  return "error";
+}
+
 export const config: AppConfig = Object.freeze({
   port,
   mcpPath: process.env.MCP_PATH ?? "/mcp",
@@ -26,6 +35,9 @@ export const config: AppConfig = Object.freeze({
   scopes: {
     profileRead: "profile.read",
     ordersRead: "orders.read",
+  },
+  logging: {
+    payloadMode: normalizePayloadMode(process.env.LOG_PAYLOAD_MODE),
   },
   shop: {
     adapter: process.env.SHOP_ADAPTER ?? "mock",

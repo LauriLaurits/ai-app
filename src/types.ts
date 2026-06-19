@@ -13,6 +13,9 @@ export interface AppConfig {
     profileRead: string;
     ordersRead: string;
   };
+  logging: {
+    payloadMode: "off" | "error" | "all";
+  };
   shop: {
     adapter: string;
   };

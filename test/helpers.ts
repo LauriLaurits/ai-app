@@ -18,6 +18,7 @@ export function makeConfig(overrides: DeepPartial<AppConfig> = {}): AppConfig {
       profileRead: "profile.read",
       ordersRead: "orders.read",
     },
+    logging: { payloadMode: "off" },
     shop: { adapter: "medusa" },
     medusa: {
       baseUrl: "https://medusa.test",
