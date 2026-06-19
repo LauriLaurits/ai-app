@@ -100,6 +100,35 @@ export async function getJson<T>(key: string): Promise<T | null> {
   return memoryCleanup(safeKey) as T | null;
 }
 
+// Atomic-ish counter used for rate limiting. Returns the running count within
+// the current window and sets the expiry on the first hit.
+export async function incrementWithExpiry(
+  key: string,
+  windowSec: number
+): Promise<number> {
+  assertPersistentStorage();
+  const safeKey = namespaced(key);
+
+  if (hasRedis()) {
+    const count = Number(await redisCommand(["INCR", safeKey]));
+    if (count === 1) {
+      await redisCommand(["EXPIRE", safeKey, String(windowSec)]);
+    }
+    return count;
+  }
+
+  const now = Date.now();
+  const record = memoryStore.get(safeKey);
+  if (!record || record.expiresAt <= now) {
+    memoryStore.set(safeKey, { value: 1, expiresAt: now + windowSec * 1000 });
+    return 1;
+  }
+
+  const next = Number(record.value) + 1;
+  record.value = next;
+  return next;
+}
+
 export async function deleteKey(key: string): Promise<void> {
   const safeKey = namespaced(key);
 

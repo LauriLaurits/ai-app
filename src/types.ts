@@ -31,6 +31,11 @@ export interface AppConfig {
     refreshTokenTtlSec: number;
     storageNamespace: string;
   };
+  rateLimit: {
+    loginPerIp: number;
+    loginPerEmail: number;
+    windowSec: number;
+  };
   storage: {
     upstashUrl: string;
     upstashToken: string;

@@ -55,6 +55,20 @@ UPSTASH_REDIS_REST_TOKEN=...
 
 Do not set `MEDUSA_CUSTOMER_EMAIL` or `MEDUSA_CUSTOMER_PASSWORD` for broker production mode. Those are only for the older staging shared-customer demo.
 
+## Login Abuse Protection
+
+`/oauth/login` forwards the customer's Medusa email/password to Medusa, so it is rate limited against brute force. Attempts are counted (in the same Redis store) per source IP and per target email within a rolling window:
+
+```text
+OAUTH_BROKER_LOGIN_RATE_LIMIT_IP=20       # attempts per IP per window
+OAUTH_BROKER_LOGIN_RATE_LIMIT_EMAIL=10    # attempts per email per window
+OAUTH_BROKER_LOGIN_RATE_LIMIT_WINDOW_SEC=900
+```
+
+When a limit is hit the endpoint returns `429` with a `Retry-After` header. The source IP is taken from `x-forwarded-for` (set by Vercel). Set a limit to `0` to disable that dimension.
+
+Login failures never echo the raw upstream status to the user: bad credentials show "Invalid email or password" (`401`), and an unreachable Medusa shows "temporarily unavailable" (`503`). The real upstream status is logged as `broker_login_failed`.
+
 ## ChatGPT Connector
 
 Use OAuth authentication.
