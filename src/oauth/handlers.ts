@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   customerDisplayName,
@@ -6,33 +5,16 @@ import {
   loginCustomer,
   maskEmail,
   MedusaRequestError,
-  refreshCustomerToken,
 } from "../medusa/client.js";
 import { createAppLogger, hashUserId } from "../logging/logger.js";
-import type { AppConfig, BrokerSession } from "../types.js";
+import type { AppConfig } from "../types.js";
 import { oauthMetadata } from "./metadata.js";
 import { renderLoginPage } from "./loginPage.js";
 import { checkRateLimit } from "./rateLimit.js";
+import { createTokenGrants } from "./tokenGrants.js";
 import { parseScopes, validateAuthorizationParams } from "./validation.js";
-import {
-  consumeAuthorizationCode,
-  consumeRefreshToken,
-  randomToken,
-  storeAccessToken,
-  storeAuthorizationCode,
-  storeRefreshToken,
-} from "./storage.js";
+import { randomToken, storeAuthorizationCode } from "./storage.js";
 import { clientIp, readForm, redirect, sendHtml, sendJson } from "./http.js";
-
-interface AuthorizationCodePayload extends BrokerSession {
-  clientId: string;
-  redirectUri: string;
-  codeChallenge: string;
-}
-
-function pkceS256(verifier: string): string {
-  return crypto.createHash("sha256").update(verifier).digest("base64url");
-}
 
 function authorizationParamsFromUrl(req: IncomingMessage): Record<string, string> {
   const url = new URL(req.url ?? "/", `https://${req.headers.host ?? "localhost"}`);
@@ -48,6 +30,7 @@ export interface OAuthHandlers {
 
 export function createOAuthHandlers(config: AppConfig): OAuthHandlers {
   const logger = createAppLogger(config);
+  const grants = createTokenGrants(config);
 
   async function loginToMedusa(email: string, password: string) {
     if (!config.medusa.baseUrl || !config.medusa.publishableKey) {
@@ -63,92 +46,6 @@ export function createOAuthHandlers(config: AppConfig): OAuthHandlers {
       displayName: customerDisplayName(customer),
       emailMasked: maskEmail(customer.email ?? email),
     };
-  }
-
-  function tokenResponse(accessToken: string, refreshToken: string) {
-    return {
-      access_token: accessToken,
-      token_type: "Bearer",
-      expires_in: config.broker.accessTokenTtlSec,
-      refresh_token: refreshToken,
-      scope: `${config.scopes.profileRead} ${config.scopes.ordersRead}`,
-    };
-  }
-
-  async function issueTokens(session: BrokerSession) {
-    const accessToken = randomToken("atk");
-    const refreshToken = randomToken("rtk");
-    const payload: BrokerSession = {
-      ...session,
-      issuedAt: new Date().toISOString(),
-    };
-
-    await storeAccessToken(accessToken, payload, config.broker.accessTokenTtlSec);
-    await storeRefreshToken(refreshToken, payload, config.broker.refreshTokenTtlSec);
-
-    return tokenResponse(accessToken, refreshToken);
-  }
-
-  async function handleAuthorizationCodeGrant(
-    form: Record<string, string>,
-    res: ServerResponse
-  ): Promise<void> {
-    const codePayload = await consumeAuthorizationCode<AuthorizationCodePayload>(
-      form.code ?? ""
-    );
-    if (!codePayload) {
-      sendJson(res, 400, { error: "invalid_grant" });
-      return;
-    }
-
-    if (
-      form.client_id !== codePayload.clientId ||
-      form.redirect_uri !== codePayload.redirectUri ||
-      pkceS256(form.code_verifier ?? "") !== codePayload.codeChallenge
-    ) {
-      sendJson(res, 400, { error: "invalid_grant" });
-      return;
-    }
-
-    const response = await issueTokens({
-      customerId: codePayload.customerId,
-      displayName: codePayload.displayName,
-      emailMasked: codePayload.emailMasked,
-      scopes: codePayload.scopes,
-      medusaToken: codePayload.medusaToken,
-    });
-    sendJson(res, 200, response);
-  }
-
-  async function handleRefreshGrant(
-    form: Record<string, string>,
-    res: ServerResponse
-  ): Promise<void> {
-    const session = await consumeRefreshToken<BrokerSession>(form.refresh_token ?? "");
-    if (!session) {
-      sendJson(res, 400, { error: "invalid_grant" });
-      return;
-    }
-
-    // Medusa JWTs expire on their own (24h by default), so a refresh that
-    // keeps the old JWT would hand out broker tokens that can no longer reach
-    // the shop. Rotate the Medusa JWT here; if Medusa rejects it, the user
-    // must sign in again.
-    let medusaToken = session.medusaToken;
-    if (medusaToken) {
-      try {
-        medusaToken = await refreshCustomerToken(config, medusaToken);
-      } catch {
-        sendJson(res, 400, {
-          error: "invalid_grant",
-          error_description: "Webshop session expired. Please sign in again.",
-        });
-        return;
-      }
-    }
-
-    const response = await issueTokens({ ...session, medusaToken });
-    sendJson(res, 200, response);
   }
 
   return {
@@ -286,12 +183,12 @@ export function createOAuthHandlers(config: AppConfig): OAuthHandlers {
       }
 
       if (form.grant_type === "authorization_code") {
-        await handleAuthorizationCodeGrant(form, res);
+        await grants.handleAuthorizationCodeGrant(form, res);
         return;
       }
 
       if (form.grant_type === "refresh_token") {
-        await handleRefreshGrant(form, res);
+        await grants.handleRefreshGrant(form, res);
         return;
       }
 
