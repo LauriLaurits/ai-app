@@ -37,11 +37,26 @@ export function sendJson(
   res.end(JSON.stringify(body));
 }
 
-export function sendHtml(res: ServerResponse, statusCode: number, html: string): void {
+export function sendHtml(
+  res: ServerResponse,
+  statusCode: number,
+  html: string,
+  headers: Record<string, string> = {}
+): void {
   res.writeHead(statusCode, {
     "content-type": "text/html; charset=utf-8",
+    ...headers,
   });
   res.end(html);
+}
+
+export function clientIp(req: IncomingMessage): string {
+  const forwarded = req.headers["x-forwarded-for"];
+  const raw = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+  if (raw) {
+    return raw.split(",")[0]?.trim() || "unknown";
+  }
+  return req.socket?.remoteAddress ?? "unknown";
 }
 
 export function redirect(res: ServerResponse, location: string): void {

@@ -34,6 +34,7 @@ export function makeConfig(overrides: DeepPartial<AppConfig> = {}): AppConfig {
       refreshTokenTtlSec: 30 * 24 * 60 * 60,
       storageNamespace: "test",
     },
+    rateLimit: { loginPerIp: 1000, loginPerEmail: 1000, windowSec: 900 },
     storage: { upstashUrl: "", upstashToken: "" },
     openObserve: { ingestUrl: "", authHeader: "" },
     telemetry: {

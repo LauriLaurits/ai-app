@@ -53,6 +53,11 @@ export const config: AppConfig = Object.freeze({
     ),
     storageNamespace: process.env.OAUTH_BROKER_STORAGE_NAMESPACE ?? "ai-app",
   },
+  rateLimit: {
+    loginPerIp: Number(process.env.OAUTH_BROKER_LOGIN_RATE_LIMIT_IP ?? 20),
+    loginPerEmail: Number(process.env.OAUTH_BROKER_LOGIN_RATE_LIMIT_EMAIL ?? 10),
+    windowSec: Number(process.env.OAUTH_BROKER_LOGIN_RATE_LIMIT_WINDOW_SEC ?? 15 * 60),
+  },
   storage: {
     upstashUrl: process.env.UPSTASH_REDIS_REST_URL ?? "",
     upstashToken: process.env.UPSTASH_REDIS_REST_TOKEN ?? "",

@@ -5,10 +5,13 @@ import {
   fetchCustomerProfile,
   loginCustomer,
   maskEmail,
+  MedusaRequestError,
   refreshCustomerToken,
 } from "../medusa/client.js";
+import { createAppLogger, hashUserId } from "../logging/logger.js";
 import type { AppConfig, BrokerSession } from "../types.js";
 import { oauthMetadata } from "./metadata.js";
+import { checkRateLimit } from "./rateLimit.js";
 import {
   consumeAuthorizationCode,
   consumeRefreshToken,
@@ -17,7 +20,7 @@ import {
   storeAuthorizationCode,
   storeRefreshToken,
 } from "./storage.js";
-import { readForm, redirect, sendHtml, sendJson } from "./http.js";
+import { clientIp, readForm, redirect, sendHtml, sendJson } from "./http.js";
 
 interface AuthorizationCodePayload extends BrokerSession {
   clientId: string;
@@ -55,6 +58,7 @@ export interface OAuthHandlers {
 }
 
 export function createOAuthHandlers(config: AppConfig): OAuthHandlers {
+  const logger = createAppLogger(config);
   const allowedScopes = new Set([
     config.scopes.profileRead,
     config.scopes.ordersRead,
@@ -297,6 +301,45 @@ export function createOAuthHandlers(config: AppConfig): OAuthHandlers {
         return;
       }
 
+      // The login form proxies real Medusa passwords, so the endpoint must be
+      // protected against brute force. Limit by source IP and by target email.
+      const ip = clientIp(req);
+      const email = (form.email ?? "").trim().toLowerCase();
+      const ipLimit = await checkRateLimit(
+        "login-ip",
+        ip,
+        config.rateLimit.loginPerIp,
+        config.rateLimit.windowSec
+      );
+      const emailLimit = email
+        ? await checkRateLimit(
+            "login-email",
+            email,
+            config.rateLimit.loginPerEmail,
+            config.rateLimit.windowSec
+          )
+        : { allowed: true, retryAfterSec: 0 };
+
+      if (!ipLimit.allowed || !emailLimit.allowed) {
+        const retryAfter = Math.max(ipLimit.retryAfterSec, emailLimit.retryAfterSec);
+        logger.warn("broker_login_rate_limited", {
+          ipHash: hashUserId(ip),
+          emailMasked: maskEmail(email),
+          byIp: !ipLimit.allowed,
+          byEmail: !emailLimit.allowed,
+        });
+        sendHtml(
+          res,
+          429,
+          loginPage(
+            form,
+            "Too many sign-in attempts. Please wait a few minutes and try again."
+          ),
+          { "retry-after": String(retryAfter) }
+        );
+        return;
+      }
+
       try {
         const scopes = parseScopes(form.scope);
         const medusa = await loginToMedusa(form.email ?? "", form.password ?? "");
@@ -324,10 +367,28 @@ export function createOAuthHandlers(config: AppConfig): OAuthHandlers {
 
         redirect(res, redirectUrl.toString());
       } catch (loginError) {
+        const status =
+          loginError instanceof MedusaRequestError ? loginError.status : 0;
+
+        logger.warn("broker_login_failed", {
+          emailMasked: maskEmail(email),
+          upstreamStatus: status,
+        });
+
+        // Don't leak raw upstream status/HTML to the customer. 401 means bad
+        // credentials; 5xx (or no status) means the webshop is unreachable.
+        if (status === 401) {
+          sendHtml(res, 401, loginPage(form, "Invalid email or password."));
+          return;
+        }
+
         sendHtml(
           res,
-          401,
-          loginPage(form, loginError instanceof Error ? loginError.message : "Login failed.")
+          503,
+          loginPage(
+            form,
+            "The webshop is temporarily unavailable. Please try again in a few minutes."
+          )
         );
       }
     },
