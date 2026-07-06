@@ -3,6 +3,7 @@ import {
   loginCustomer,
   maskEmail,
   MedusaAuthError,
+  MedusaRequestError,
   medusaRequest,
   type MedusaCustomer,
 } from "../../medusa/client.js";
@@ -171,6 +172,19 @@ export function createMedusaAdapter(config: AppConfig): ShopAdapter {
         `/store/products/${encodeURIComponent(id)}?${params.toString()}${regionQuery()}`
       );
       return productToDetails(body?.product ?? null);
+    },
+
+    // Implemented in Task 6 (medusaCart.ts). Explicit 501 beats a silent lie.
+    async getCart() {
+      throw new MedusaRequestError("Cart is not implemented for Medusa yet.", 501);
+    },
+
+    async addToCart() {
+      throw new MedusaRequestError("Cart is not implemented for Medusa yet.", 501);
+    },
+
+    async updateCartItem() {
+      throw new MedusaRequestError("Cart is not implemented for Medusa yet.", 501);
     },
   };
 }

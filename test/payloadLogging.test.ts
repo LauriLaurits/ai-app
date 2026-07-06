@@ -63,6 +63,15 @@ function workingShop(): ShopAdapter {
     async getProduct() {
       return null;
     },
+    async getCart() {
+      return null;
+    },
+    async addToCart() {
+      throw new Error("cart not used in payload logging tests");
+    },
+    async updateCartItem() {
+      throw new Error("cart not used in payload logging tests");
+    },
   };
 }
 

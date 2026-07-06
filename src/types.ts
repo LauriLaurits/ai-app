@@ -204,6 +204,9 @@ export interface ShopAdapter {
   getOrderTracking(identity: Identity, orderId: string): Promise<OrderTracking | null>;
   searchProducts(query: ProductSearchQuery): Promise<ProductSearchResult>;
   getProduct(id: string): Promise<ProductDetails | null>;
+  getCart(identity: Identity): Promise<Cart | null>;
+  addToCart(identity: Identity, item: CartItemInput): Promise<Cart>;
+  updateCartItem(identity: Identity, lineItemId: string, quantity: number): Promise<Cart>;
 }
 
 export interface BrokerSession {

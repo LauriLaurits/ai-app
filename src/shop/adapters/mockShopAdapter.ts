@@ -1,4 +1,7 @@
 import type {
+  Cart,
+  CartItemInput,
+  CartLine,
   CustomerProfile,
   Identity,
   OrderDetails,
@@ -8,6 +11,7 @@ import type {
   ProductDetails,
   ProductSearchQuery,
   ProductSummary,
+  ProductVariantInfo,
   ShopAdapter,
 } from "../../types.js";
 
@@ -135,6 +139,40 @@ const products: ProductDetails[] = [
   },
 ];
 
+function findVariant(
+  variantId: string
+): { product: ProductDetails; variant: ProductVariantInfo } | null {
+  for (const product of products) {
+    const variant = product.variants.find((entry) => entry.id === variantId);
+    if (variant) return { product, variant };
+  }
+  return null;
+}
+
+function roundMoney(amount: number): number {
+  return Math.round(amount * 100) / 100;
+}
+
+function withQuantity(line: CartLine, quantity: number): CartLine {
+  return {
+    ...line,
+    quantity,
+    lineTotal: {
+      amount: roundMoney(line.unitPrice.amount * quantity),
+      currency: line.unitPrice.currency,
+    },
+  };
+}
+
+function recalc(cart: Cart): Cart {
+  const itemCount = cart.items.reduce((sum, line) => sum + line.quantity, 0);
+  const amount = roundMoney(
+    cart.items.reduce((sum, line) => sum + line.lineTotal.amount, 0)
+  );
+  const currency = cart.items[0]?.lineTotal.currency ?? "EUR";
+  return { ...cart, itemCount, total: { amount, currency } };
+}
+
 function currentOrders(identity: Identity): OrderDetails[] {
   return orders[identity.userId] ?? [];
 }
@@ -178,6 +216,7 @@ function toSummary(order: OrderDetails): OrderSummary {
 }
 
 export function createMockShopAdapter(): ShopAdapter {
+  const carts = new Map<string, Cart>();
   return {
     async getCurrentCustomer(identity) {
       return (
@@ -225,6 +264,70 @@ export function createMockShopAdapter(): ShopAdapter {
 
     async getProduct(id) {
       return products.find((product) => product.id === id) ?? null;
+    },
+
+    async getCart(identity) {
+      return carts.get(identity.userId) ?? null;
+    },
+
+    async addToCart(identity, item: CartItemInput) {
+      const match = findVariant(item.variantId);
+      if (!match) {
+        throw new Error(`Unknown product variant: ${item.variantId}`);
+      }
+
+      const unitPrice = match.variant.price ?? { amount: 0, currency: "EUR" };
+      const cart = carts.get(identity.userId) ?? {
+        id: `mock-cart-${identity.userId}`,
+        items: [],
+        itemCount: 0,
+        total: { amount: 0, currency: unitPrice.currency },
+      };
+      const existing = cart.items.find((line) => line.variantId === item.variantId);
+      const items = existing
+        ? cart.items.map((line) =>
+            line.variantId === item.variantId
+              ? withQuantity(line, line.quantity + item.quantity)
+              : line
+          )
+        : [
+            ...cart.items,
+            withQuantity(
+              {
+                id: `line_${item.variantId}`,
+                variantId: item.variantId,
+                productId: match.product.id,
+                title: match.product.title,
+                quantity: item.quantity,
+                unitPrice,
+                lineTotal: unitPrice,
+              },
+              item.quantity
+            ),
+          ];
+
+      const next = recalc({ ...cart, items });
+      carts.set(identity.userId, next);
+      return next;
+    },
+
+    async updateCartItem(identity, lineItemId, quantity) {
+      const cart = carts.get(identity.userId);
+      const line = cart?.items.find((entry) => entry.id === lineItemId);
+      if (!cart || !line) {
+        throw new Error(`Unknown cart line item: ${lineItemId}`);
+      }
+
+      const items =
+        quantity <= 0
+          ? cart.items.filter((entry) => entry.id !== lineItemId)
+          : cart.items.map((entry) =>
+              entry.id === lineItemId ? withQuantity(entry, quantity) : entry
+            );
+
+      const next = recalc({ ...cart, items });
+      carts.set(identity.userId, next);
+      return next;
     },
   };
 }

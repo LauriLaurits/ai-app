@@ -12,5 +12,8 @@ export function createApothekaAdapter(): ShopAdapter {
     getOrderTracking: notReady,
     searchProducts: notReady,
     getProduct: notReady,
+    getCart: notReady,
+    addToCart: notReady,
+    updateCartItem: notReady,
   };
 }

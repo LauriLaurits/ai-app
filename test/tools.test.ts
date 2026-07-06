@@ -26,6 +26,25 @@ const authenticated: AuthResult = {
   reason: null,
 };
 
+function sampleCart() {
+  return {
+    id: "cart_1",
+    items: [
+      {
+        id: "line_1",
+        variantId: "var_1",
+        productId: "prod_1",
+        title: "Vitamin D supplement",
+        quantity: 2,
+        unitPrice: { amount: 12.9, currency: "EUR" },
+        lineTotal: { amount: 25.8, currency: "EUR" },
+      },
+    ],
+    itemCount: 2,
+    total: { amount: 25.8, currency: "EUR" },
+  };
+}
+
 function workingShop(): ShopAdapter {
   return {
     async getCurrentCustomer() {
@@ -85,6 +104,15 @@ function workingShop(): ShopAdapter {
     async getProduct() {
       return null;
     },
+    async getCart() {
+      return sampleCart();
+    },
+    async addToCart() {
+      return sampleCart();
+    },
+    async updateCartItem() {
+      return sampleCart();
+    },
   };
 }
 
@@ -99,6 +127,9 @@ function expiredShop(): ShopAdapter {
     getOrderTracking: fail,
     searchProducts: fail,
     getProduct: fail,
+    getCart: fail,
+    addToCart: fail,
+    updateCartItem: fail,
   };
 }
 
