@@ -1,4 +1,5 @@
 import type { AppConfig } from "../types.js";
+import { supportedScopes } from "./validation.js";
 
 export function oauthMetadata(config: AppConfig): Record<string, unknown> {
   const issuer = config.auth.issuer;
@@ -11,7 +12,7 @@ export function oauthMetadata(config: AppConfig): Record<string, unknown> {
     grant_types_supported: ["authorization_code", "refresh_token"],
     code_challenge_methods_supported: ["S256"],
     token_endpoint_auth_methods_supported: ["none"],
-    scopes_supported: [config.scopes.profileRead, config.scopes.ordersRead, "offline"],
+    scopes_supported: [...supportedScopes(config), "offline"],
     resource_documentation: `${config.publicBaseUrl}/docs`,
   };
 }

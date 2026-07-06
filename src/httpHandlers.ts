@@ -195,7 +195,7 @@ export async function handleMcpRequest(
     if (!res.headersSent) {
       const challenge = buildWwwAuthenticate(
         config,
-        [config.scopes.profileRead, config.scopes.ordersRead],
+        supportedScopes(config),
         {
           error: "server_error",
           errorDescription: "MCP request failed",

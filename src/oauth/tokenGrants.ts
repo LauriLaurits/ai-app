@@ -3,6 +3,7 @@ import type { ServerResponse } from "node:http";
 import { refreshCustomerToken } from "../medusa/client.js";
 import type { AppConfig, BrokerSession } from "../types.js";
 import { sendJson } from "./http.js";
+import { supportedScopes } from "./validation.js";
 import {
   consumeAuthorizationCode,
   consumeRefreshToken,
@@ -36,7 +37,7 @@ export function createTokenGrants(config: AppConfig): TokenGrants {
       token_type: "Bearer",
       expires_in: config.broker.accessTokenTtlSec,
       refresh_token: refreshToken,
-      scope: `${config.scopes.profileRead} ${config.scopes.ordersRead}`,
+      scope: supportedScopes(config).join(" "),
     };
   }
 

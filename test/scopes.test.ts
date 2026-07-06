@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { protectedResourceMetadata } from "../src/httpHandlers.js";
+import { oauthMetadata } from "../src/oauth/metadata.js";
 import { parseScopes, supportedScopes } from "../src/oauth/validation.js";
 import { makeConfig } from "./helpers.js";
 
@@ -36,6 +37,14 @@ describe("cart scopes", () => {
     const scopes = protectedResourceMetadata().scopes_supported as string[];
     expect(scopes).toEqual(
       expect.arrayContaining(["cart.read", "cart.write"])
+    );
+  });
+
+  it("advertises cart scopes in authorization server metadata", () => {
+    const config = makeConfig();
+    const scopes = oauthMetadata(config).scopes_supported as string[];
+    expect(scopes).toEqual(
+      expect.arrayContaining(["cart.read", "cart.write", "offline"])
     );
   });
 });
