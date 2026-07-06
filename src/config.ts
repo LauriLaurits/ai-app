@@ -35,12 +35,19 @@ export const config: AppConfig = Object.freeze({
   scopes: {
     profileRead: "profile.read",
     ordersRead: "orders.read",
+    cartRead: "cart.read",
+    cartWrite: "cart.write",
   },
   logging: {
     payloadMode: normalizePayloadMode(process.env.LOG_PAYLOAD_MODE),
   },
   shop: {
     adapter: process.env.SHOP_ADAPTER ?? "mock",
+  },
+  checkout: {
+    // Storefront handoff for get_checkout_link; {cartId} is replaced with the
+    // active cart id. Empty disables the handoff link.
+    urlTemplate: process.env.CHECKOUT_URL_TEMPLATE ?? "",
   },
   medusa: {
     baseUrl: normalizeBaseUrl(process.env.MEDUSA_BASE_URL ?? ""),

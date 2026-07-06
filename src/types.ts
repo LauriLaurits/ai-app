@@ -12,12 +12,17 @@ export interface AppConfig {
   scopes: {
     profileRead: string;
     ordersRead: string;
+    cartRead: string;
+    cartWrite: string;
   };
   logging: {
     payloadMode: "off" | "error" | "all";
   };
   shop: {
     adapter: string;
+  };
+  checkout: {
+    urlTemplate: string;
   };
   medusa: {
     baseUrl: string;

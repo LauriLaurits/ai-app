@@ -1,12 +1,16 @@
 import type { AppConfig } from "../types.js";
 
-function allowedScopes(config: AppConfig): Set<string> {
-  return new Set([
+export function supportedScopes(config: AppConfig): string[] {
+  return [
     config.scopes.profileRead,
     config.scopes.ordersRead,
-    "offline",
-    "offline_access",
-  ]);
+    config.scopes.cartRead,
+    config.scopes.cartWrite,
+  ];
+}
+
+function allowedScopes(config: AppConfig): Set<string> {
+  return new Set([...supportedScopes(config), "offline", "offline_access"]);
 }
 
 export function parseScopes(config: AppConfig, value: string | undefined): string[] {
@@ -18,7 +22,7 @@ export function parseScopes(config: AppConfig, value: string | undefined): strin
 
   const scopes = requested.length
     ? requested.filter((scope) => allowed.has(scope))
-    : [config.scopes.profileRead, config.scopes.ordersRead];
+    : supportedScopes(config);
 
   return [...new Set(scopes.filter((scope) => scope !== "offline_access"))];
 }

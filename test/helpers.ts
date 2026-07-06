@@ -17,9 +17,12 @@ export function makeConfig(overrides: DeepPartial<AppConfig> = {}): AppConfig {
     scopes: {
       profileRead: "profile.read",
       ordersRead: "orders.read",
+      cartRead: "cart.read",
+      cartWrite: "cart.write",
     },
     logging: { payloadMode: "off" },
     shop: { adapter: "medusa" },
+    checkout: { urlTemplate: "" },
     medusa: {
       baseUrl: "https://medusa.test",
       publishableKey: "pk_test",

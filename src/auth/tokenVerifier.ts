@@ -1,6 +1,7 @@
 import type { IncomingMessage } from "node:http";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { getAccessTokenSession } from "../oauth/storage.js";
+import { supportedScopes } from "../oauth/validation.js";
 import type { AppConfig, AuthResult, BrokerSession } from "../types.js";
 
 let remoteJwks: ReturnType<typeof createRemoteJWKSet> | undefined;
@@ -46,7 +47,7 @@ function demoAuthResult(config: AppConfig): AuthResult {
       displayName: "Demo Customer",
       shopIds: ["apotheka"],
     },
-    scopes: [config.scopes.profileRead, config.scopes.ordersRead],
+    scopes: supportedScopes(config),
     reason: null,
   };
 }
@@ -82,7 +83,7 @@ export async function authenticateRequest(
         displayName: "Demo Customer",
         shopIds: ["apotheka"],
       },
-      scopes: [config.scopes.profileRead, config.scopes.ordersRead],
+      scopes: supportedScopes(config),
       reason: null,
     };
   }

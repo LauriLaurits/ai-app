@@ -5,6 +5,7 @@ import { authenticateRequest } from "./auth/tokenVerifier.js";
 import { buildWwwAuthenticate } from "./auth/challenge.js";
 import { config } from "./config.js";
 import { createAppLogger, hashUserId } from "./logging/logger.js";
+import { supportedScopes } from "./oauth/validation.js";
 import { createShopAdapter } from "./shop/createShopAdapter.js";
 import { createWebshopMcpServer } from "./tools/index.js";
 
@@ -53,7 +54,7 @@ export function protectedResourceMetadata(): Record<string, unknown> {
   return {
     resource: config.publicBaseUrl,
     authorization_servers: [config.auth.issuer],
-    scopes_supported: [config.scopes.profileRead, config.scopes.ordersRead],
+    scopes_supported: supportedScopes(config),
     resource_documentation: `${config.publicBaseUrl}/docs`,
   };
 }
@@ -134,7 +135,7 @@ export async function handleMcpRequest(
   if (auth.status !== "authenticated") {
     const challenge = buildWwwAuthenticate(
       config,
-      [config.scopes.profileRead, config.scopes.ordersRead],
+      supportedScopes(config),
       {
         ...(auth.status === "invalid" ? { error: "invalid_token" } : {}),
         errorDescription: auth.reason ?? "Authentication required",

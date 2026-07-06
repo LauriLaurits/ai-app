@@ -1,0 +1,41 @@
+import { describe, expect, it } from "vitest";
+import { protectedResourceMetadata } from "../src/httpHandlers.js";
+import { parseScopes, supportedScopes } from "../src/oauth/validation.js";
+import { makeConfig } from "./helpers.js";
+
+describe("cart scopes", () => {
+  it("lists all four scopes as supported", () => {
+    const config = makeConfig();
+    expect(supportedScopes(config)).toEqual([
+      "profile.read",
+      "orders.read",
+      "cart.read",
+      "cart.write",
+    ]);
+  });
+
+  it("defaults token requests without a scope param to all supported scopes", () => {
+    const config = makeConfig();
+    expect(parseScopes(config, undefined)).toEqual([
+      "profile.read",
+      "orders.read",
+      "cart.read",
+      "cart.write",
+    ]);
+  });
+
+  it("accepts explicitly requested cart scopes", () => {
+    const config = makeConfig();
+    expect(parseScopes(config, "cart.read cart.write")).toEqual([
+      "cart.read",
+      "cart.write",
+    ]);
+  });
+
+  it("advertises cart scopes in protected resource metadata", () => {
+    const scopes = protectedResourceMetadata().scopes_supported as string[];
+    expect(scopes).toEqual(
+      expect.arrayContaining(["cart.read", "cart.write"])
+    );
+  });
+});
