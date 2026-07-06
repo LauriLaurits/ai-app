@@ -1,5 +1,7 @@
 import { money, toNumber } from "../../money.js";
 import type {
+  Cart,
+  CartLine,
   Money,
   OrderDetails,
   OrderItem,
@@ -95,7 +97,9 @@ function fulfillmentStatus(order: MedusaOrder): string {
   return String(order.fulfillment_status ?? "unknown");
 }
 
-function unitPriceMinor(item: MedusaOrderItem): number | string {
+function unitPriceMinor(
+  item: Pick<MedusaOrderItem, "quantity" | "unit_price" | "total" | "subtotal">
+): number | string {
   const quantity = Math.max(toNumber(item.quantity), 1);
   if (item.unit_price !== undefined) return item.unit_price;
   if (item.total !== undefined) return toNumber(item.total) / quantity;
@@ -229,5 +233,49 @@ export function productToDetails(product: MedusaProduct | null): ProductDetails 
     ...productToSummary(product),
     description: product.description ?? null,
     variants: variantInfos,
+  };
+}
+
+export interface MedusaCartLine {
+  id?: string;
+  variant_id?: string | null;
+  product_id?: string | null;
+  product_title?: string | null;
+  title?: string | null;
+  variant_title?: string | null;
+  quantity?: number | string;
+  unit_price?: number | string;
+  total?: number | string;
+  subtotal?: number | string;
+}
+
+export interface MedusaCart {
+  id?: string;
+  currency_code?: string;
+  total?: number | string;
+  item_total?: number | string;
+  subtotal?: number | string;
+  items?: MedusaCartLine[];
+}
+
+export function cartToDomain(cart: MedusaCart): Cart {
+  const items = Array.isArray(cart.items) ? cart.items : [];
+  const currency = cart.currency_code;
+
+  const lines: CartLine[] = items.map((item) => ({
+    id: String(item.id ?? "unknown"),
+    variantId: item.variant_id ?? null,
+    productId: item.product_id ?? null,
+    title: item.product_title ?? item.title ?? item.variant_title ?? "Cart item",
+    quantity: toNumber(item.quantity),
+    unitPrice: money(unitPriceMinor(item), currency),
+    lineTotal: money(item.total ?? item.subtotal ?? 0, currency),
+  }));
+
+  return {
+    id: String(cart.id ?? "unknown"),
+    items: lines,
+    itemCount: lines.reduce((sum, line) => sum + line.quantity, 0),
+    total: money(cart.total ?? cart.item_total ?? cart.subtotal, currency),
   };
 }

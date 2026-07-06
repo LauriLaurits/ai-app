@@ -158,6 +158,28 @@ export interface ProductSearchResult {
   count: number;
 }
 
+export interface CartLine {
+  id: string;
+  variantId: string | null;
+  productId: string | null;
+  title: string;
+  quantity: number;
+  unitPrice: Money;
+  lineTotal: Money;
+}
+
+export interface Cart {
+  id: string;
+  items: CartLine[];
+  itemCount: number;
+  total: Money;
+}
+
+export interface CartItemInput {
+  variantId: string;
+  quantity: number;
+}
+
 export interface Identity {
   userId: string;
   displayName: string;
