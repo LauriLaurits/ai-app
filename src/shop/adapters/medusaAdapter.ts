@@ -3,7 +3,6 @@ import {
   loginCustomer,
   maskEmail,
   MedusaAuthError,
-  MedusaRequestError,
   medusaRequest,
   type MedusaCustomer,
 } from "../../medusa/client.js";
@@ -14,6 +13,7 @@ import type {
   ProductSearchQuery,
   ShopAdapter,
 } from "../../types.js";
+import { createMedusaCartMethods } from "./medusaCart.js";
 import {
   orderToDetails,
   orderToSummary,
@@ -62,17 +62,21 @@ export function createMedusaAdapter(config: AppConfig): ShopAdapter {
 
   // Authenticated store call on behalf of a customer, with one retry through the
   // shared fallback login when a cached (non per-customer) token has expired.
-  async function customerRequest<T>(path: string, identity: Identity | null): Promise<T> {
+  async function customerRequest<T>(
+    path: string,
+    identity: Identity | null,
+    init: RequestInit = {}
+  ): Promise<T> {
     const token = await customerToken(identity);
     try {
-      return await medusaRequest<T>(config, path, token);
+      return await medusaRequest<T>(config, path, token, init);
     } catch (error) {
       if (!(error instanceof MedusaAuthError) || identity?.medusaToken) {
         throw error;
       }
       cachedToken = null;
       tokenExpiresAt = 0;
-      return medusaRequest<T>(config, path, await login());
+      return medusaRequest<T>(config, path, await login(), init);
     }
   }
 
@@ -174,17 +178,6 @@ export function createMedusaAdapter(config: AppConfig): ShopAdapter {
       return productToDetails(body?.product ?? null);
     },
 
-    // Implemented in Task 6 (medusaCart.ts). Explicit 501 beats a silent lie.
-    async getCart() {
-      throw new MedusaRequestError("Cart is not implemented for Medusa yet.", 501);
-    },
-
-    async addToCart() {
-      throw new MedusaRequestError("Cart is not implemented for Medusa yet.", 501);
-    },
-
-    async updateCartItem() {
-      throw new MedusaRequestError("Cart is not implemented for Medusa yet.", 501);
-    },
+    ...createMedusaCartMethods(config, customerRequest),
   };
 }

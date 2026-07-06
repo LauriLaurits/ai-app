@@ -168,6 +168,8 @@ export interface MedusaFetchState {
   customer: Record<string, unknown>;
   orders: Array<Record<string, unknown>>;
   products: Array<Record<string, unknown>>;
+  carts: Array<Record<string, unknown>>;
+  cartSequence: number;
 }
 
 export function makeMedusaFetchState(): MedusaFetchState {
@@ -230,6 +232,8 @@ export function makeMedusaFetchState(): MedusaFetchState {
         ],
       },
     ],
+    carts: [],
+    cartSequence: 0,
   };
 }
 
@@ -293,6 +297,73 @@ export function makeMedusaFetch(state: MedusaFetchState): typeof fetch {
       const id = decodeURIComponent(url.pathname.split("/").pop() ?? "");
       const order = state.orders.find((entry) => String(entry.id) === id) ?? null;
       return json(200, { order });
+    }
+
+    const recalcCart = (cart: Record<string, unknown>): void => {
+      const items = cart.items as Array<Record<string, unknown>>;
+      cart.total = items.reduce((sum, line) => sum + Number(line.total ?? 0), 0);
+    };
+    const findCart = (id: string | undefined) =>
+      state.carts.find((entry) => entry.id === decodeURIComponent(id ?? "")) ?? null;
+
+    if (method === "POST" && url.pathname === "/store/carts") {
+      state.cartSequence += 1;
+      const cart = {
+        id: `cart_${state.cartSequence}`,
+        currency_code: "eur",
+        total: 0,
+        items: [] as Array<Record<string, unknown>>,
+      };
+      state.carts.push(cart);
+      return json(200, { cart });
+    }
+
+    const linesMatch = url.pathname.match(/^\/store\/carts\/([^/]+)\/line-items$/);
+    if (method === "POST" && linesMatch) {
+      const cart = findCart(linesMatch[1]);
+      if (!cart) return json(404, { message: "Cart not found" });
+      const { variant_id, quantity } = JSON.parse(String(init?.body ?? "{}"));
+      const items = cart.items as Array<Record<string, unknown>>;
+      items.push({
+        id: `line_${items.length + 1}`,
+        variant_id,
+        product_id: "prod_1",
+        product_title: "Vitamin D supplement",
+        quantity,
+        unit_price: 1290,
+        total: 1290 * Number(quantity),
+      });
+      recalcCart(cart);
+      return json(200, { cart });
+    }
+
+    const lineMatch = url.pathname.match(/^\/store\/carts\/([^/]+)\/line-items\/([^/]+)$/);
+    if (lineMatch) {
+      const cart = findCart(lineMatch[1]);
+      if (!cart) return json(404, { message: "Cart not found" });
+      const items = cart.items as Array<Record<string, unknown>>;
+      const line = items.find((entry) => entry.id === decodeURIComponent(lineMatch[2] ?? ""));
+      if (!line) return json(404, { message: "Line item not found" });
+
+      if (method === "POST") {
+        const { quantity } = JSON.parse(String(init?.body ?? "{}"));
+        line.quantity = quantity;
+        line.total = Number(line.unit_price) * Number(quantity);
+        recalcCart(cart);
+        return json(200, { cart });
+      }
+      if (method === "DELETE") {
+        cart.items = items.filter((entry) => entry !== line);
+        recalcCart(cart);
+        return json(200, { deleted: true });
+      }
+    }
+
+    const cartMatch = url.pathname.match(/^\/store\/carts\/([^/]+)$/);
+    if (method === "GET" && cartMatch) {
+      const cart = findCart(cartMatch[1]);
+      if (!cart) return json(404, { message: "Cart not found" });
+      return json(200, { cart });
     }
 
     return json(404, { message: `Unhandled test route: ${method} ${url.pathname}` });

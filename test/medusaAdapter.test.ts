@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MedusaAuthError } from "../src/medusa/client.js";
 import { createMedusaAdapter } from "../src/shop/adapters/medusaAdapter.js";
+import { clearActiveCartId } from "../src/shop/cartIdStore.js";
 import type { Identity } from "../src/types.js";
 import {
   makeConfig,
@@ -131,5 +132,59 @@ describe("medusa adapter", () => {
 
     expect(details?.items[0]?.variantId).toBe("var_1");
     expect(details?.items[0]?.productId).toBe("prod_1");
+  });
+});
+
+describe("medusa adapter cart", () => {
+  let state: MedusaFetchState;
+
+  beforeEach(async () => {
+    state = makeMedusaFetchState();
+    vi.stubGlobal("fetch", makeMedusaFetch(state));
+    await clearActiveCartId(identity.userId);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("returns null when the customer has no cart", async () => {
+    const adapter = createMedusaAdapter(config);
+    expect(await adapter.getCart(identity)).toBeNull();
+  });
+
+  it("creates a cart on first add and reuses it afterwards", async () => {
+    const adapter = createMedusaAdapter(config);
+    const first = await adapter.addToCart(identity, { variantId: "var_1", quantity: 2 });
+    const second = await adapter.addToCart(identity, { variantId: "var_1", quantity: 1 });
+
+    expect(second.id).toBe(first.id);
+    expect(state.carts).toHaveLength(1);
+    expect(second.itemCount).toBe(3);
+    expect(second.items[0]?.unitPrice).toEqual({ amount: 12.9, currency: "EUR" });
+  });
+
+  it("recovers with a fresh cart when the stored cart is gone", async () => {
+    const adapter = createMedusaAdapter(config);
+    const first = await adapter.addToCart(identity, { variantId: "var_1", quantity: 1 });
+
+    state.carts.length = 0; // completed or expired on the Medusa side
+
+    const second = await adapter.addToCart(identity, { variantId: "var_1", quantity: 1 });
+    expect(second.id).not.toBe(first.id);
+    expect(second.items).toHaveLength(1);
+  });
+
+  it("updates a line item quantity and removes it at zero", async () => {
+    const adapter = createMedusaAdapter(config);
+    const cart = await adapter.addToCart(identity, { variantId: "var_1", quantity: 2 });
+    const lineId = String(cart.items[0]?.id);
+
+    const updated = await adapter.updateCartItem(identity, lineId, 3);
+    expect(updated.items[0]?.quantity).toBe(3);
+    expect(updated.total).toEqual({ amount: 38.7, currency: "EUR" });
+
+    const emptied = await adapter.updateCartItem(identity, lineId, 0);
+    expect(emptied.items).toHaveLength(0);
   });
 });
