@@ -21,7 +21,7 @@ export interface CreateServerOptions {
 }
 
 export function createWebshopMcpServer(options: CreateServerOptions): McpServer {
-  const server = new McpServer({ name: "webshop-orders", version: "0.3.0" });
+  const server = new McpServer({ name: "webshop-orders", version: "0.4.0" });
   const ctx: ToolContext = options;
 
   registerGetCurrentCustomer(server, ctx);

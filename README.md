@@ -16,6 +16,10 @@ This project intentionally works before the Apotheka repo is available. It ships
   - `track_shipment` — shipment status, tracking number and link for one order
   - `search_products` — catalog search with price and stock
   - `get_product` — full product details and per-variant price/stock
+  - `add_to_cart` — add a product variant to the customer's cart (requires `cart.write`)
+  - `view_cart` — show the active cart with totals (requires `cart.read`)
+  - `update_cart_item` — change a line's quantity; 0 removes it (requires `cart.write`)
+  - `get_checkout_link` — hand off to the storefront checkout; payment never happens in chat
 - Mock auth mode for local development.
 - JWT verification mode for staging/production.
 - Structured request and tool logging.

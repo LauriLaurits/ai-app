@@ -95,7 +95,7 @@ https://chatgpt.com/connector/oauth/...
 Scopes:
 
 ```text
-profile.read orders.read offline
+profile.read orders.read cart.read cart.write offline
 ```
 
 ## Storage

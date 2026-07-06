@@ -54,9 +54,11 @@ ChatGPT re-authorizes.
 
 ### Cart state
 
-- `BrokerSession` gains optional `cartId`. `add_to_cart` reuses it when the
-  cart is still open; on Medusa 404/409 (expired/completed) it transparently
-  creates a fresh cart and updates the session.
+- The active cart id is stored in the broker storage layer keyed by customer
+  (`cart:customer:<id>`, 30-day TTL) so it survives token refreshes and new
+  conversations. `add_to_cart` reuses it while the cart is open; on Medusa
+  404/409 (expired/completed) it transparently creates a fresh cart and
+  updates the pointer.
 - Mock/demo auth modes keep an in-memory `cartId` per customer inside the
   mock adapter so tests and demo work without Medusa or Upstash.
 

@@ -63,8 +63,10 @@ These are hard rules for this codebase. Do not regress them.
 - New tool or adapter method ⇒ new tests. Keep the suite green before commit.
 
 ### Security & privacy
-- Tools are **read-only**. Any future write/action tool needs explicit
-  confirmation semantics and must not take payment in chat.
+- Tools are read-only except the cart tools (`add_to_cart`, `update_cart_item`),
+  which are annotated `readOnlyHint: false` so clients confirm before running
+  them and always return the full resulting cart. No tool may take payment in
+  chat; checkout is a handoff link to the storefront (`CHECKOUT_URL_TEMPLATE`).
 - Never log secrets. The logger redacts credential-like keys; payload logging
   (`LOG_PAYLOAD_MODE`) defaults to `error` and captures customer PII only when
   set to `all` — keep that default.
