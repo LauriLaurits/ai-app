@@ -26,6 +26,8 @@ export interface MedusaOrderItem {
   unit_price?: number | string;
   total?: number | string;
   subtotal?: number | string;
+  variant_id?: string | null;
+  product_id?: string | null;
 }
 
 export interface MedusaFulfillmentLabel {
@@ -107,6 +109,8 @@ function mapItems(order: MedusaOrder): OrderItem[] {
 
   return items.map((item) => ({
     sku: item.variant_sku ?? item.sku ?? item.variant?.sku ?? null,
+    variantId: item.variant_id ?? null,
+    productId: item.product_id ?? null,
     name:
       item.product_title ??
       item.title ??

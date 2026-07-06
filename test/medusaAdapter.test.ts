@@ -124,4 +124,12 @@ describe("medusa adapter", () => {
       inStock: true,
     });
   });
+
+  it("exposes variant and product ids on order line items", async () => {
+    const adapter = createMedusaAdapter(config);
+    const details = await adapter.getOrderDetails(identity, "order_1");
+
+    expect(details?.items[0]?.variantId).toBe("var_1");
+    expect(details?.items[0]?.productId).toBe("prod_1");
+  });
 });

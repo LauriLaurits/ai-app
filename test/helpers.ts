@@ -191,7 +191,15 @@ export function makeMedusaFetchState(): MedusaFetchState {
         fulfillment_status: "partially_fulfilled",
         currency_code: "eur",
         total: 29731,
-        items: [{ title: "Item", quantity: 5, unit_price: 5946 }],
+        items: [
+          {
+            title: "Item",
+            quantity: 5,
+            unit_price: 5946,
+            variant_id: "var_1",
+            product_id: "prod_1",
+          },
+        ],
         fulfillments: [
           {
             labels: [

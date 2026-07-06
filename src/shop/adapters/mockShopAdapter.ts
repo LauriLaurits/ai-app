@@ -33,18 +33,24 @@ const orders: Record<string, OrderDetails[]> = {
       items: [
         {
           sku: "demo-vit-d",
+          variantId: "var_demo_vit_d_60",
+          productId: "prod_demo_vitamin_d",
           name: "Vitamin D supplement",
           quantity: 1,
           unitPrice: { amount: 12.9, currency: "EUR" },
         },
         {
           sku: "demo-bandages",
+          variantId: null,
+          productId: null,
           name: "Elastic bandage",
           quantity: 2,
           unitPrice: { amount: 4.5, currency: "EUR" },
         },
         {
           sku: "demo-care",
+          variantId: null,
+          productId: null,
           name: "Skin care cream",
           quantity: 1,
           unitPrice: { amount: 20.7, currency: "EUR" },
@@ -66,12 +72,16 @@ const orders: Record<string, OrderDetails[]> = {
       items: [
         {
           sku: "demo-toothpaste",
+          variantId: "var_demo_toothpaste",
+          productId: "prod_demo_toothpaste",
           name: "Sensitive toothpaste",
           quantity: 1,
           unitPrice: { amount: 6.4, currency: "EUR" },
         },
         {
           sku: "demo-mouthwash",
+          variantId: null,
+          productId: null,
           name: "Mouthwash",
           quantity: 1,
           unitPrice: { amount: 11.8, currency: "EUR" },

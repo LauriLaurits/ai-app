@@ -71,6 +71,8 @@ export interface Money {
 
 export interface OrderItem {
   sku: string | null;
+  variantId: string | null;
+  productId: string | null;
   name: string;
   quantity: number;
   unitPrice: Money;

@@ -18,6 +18,8 @@ export const orderDetailsSchema = orderSummarySchema.extend({
   items: z.array(
     z.object({
       sku: z.string().nullable().optional(),
+      variantId: z.string().nullable(),
+      productId: z.string().nullable(),
       name: z.string(),
       quantity: z.number(),
       unitPrice: moneySchema,
