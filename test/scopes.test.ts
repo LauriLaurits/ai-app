@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { authenticateRequest } from "../src/auth/tokenVerifier.js";
 import { protectedResourceMetadata } from "../src/httpHandlers.js";
 import { oauthMetadata } from "../src/oauth/metadata.js";
 import { parseScopes, supportedScopes } from "../src/oauth/validation.js";
-import { makeConfig } from "./helpers.js";
+import { makeConfig, makeReq } from "./helpers.js";
 
 describe("cart scopes", () => {
   it("lists all four scopes as supported", () => {
@@ -46,5 +47,16 @@ describe("cart scopes", () => {
     expect(scopes).toEqual(
       expect.arrayContaining(["cart.read", "cart.write", "offline"])
     );
+  });
+
+  it("grants demo-mode auth cart.read but never cart.write (shared unauthenticated cart)", async () => {
+    const config = makeConfig({ auth: { mode: "demo" }, shop: { adapter: "mock" } });
+    const req = makeReq();
+
+    const auth = await authenticateRequest(req, config);
+
+    expect(auth.status).toBe("authenticated");
+    expect(auth.scopes).toContain("cart.read");
+    expect(auth.scopes).not.toContain("cart.write");
   });
 });

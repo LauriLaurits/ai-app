@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CartNotFoundError } from "../src/shop/cartErrors.js";
 import { createMockShopAdapter } from "../src/shop/adapters/mockShopAdapter.js";
 import type { Identity } from "../src/types.js";
 
@@ -87,5 +88,17 @@ describe("mock shop adapter cart", () => {
     await expect(
       shop.addToCart(cartIdentity, { variantId: "var_nope", quantity: 1 })
     ).rejects.toThrow(/variant/i);
+  });
+
+  it("rejects unknown cart line items with a CartNotFoundError, not a generic Error", async () => {
+    const shop = createMockShopAdapter();
+    await shop.addToCart(cartIdentity, { variantId: "var_demo_vit_d_60", quantity: 1 });
+
+    await expect(
+      shop.updateCartItem(cartIdentity, "line_nope", 1)
+    ).rejects.toThrow(CartNotFoundError);
+    await expect(
+      shop.updateCartItem(cartIdentity, "line_nope", 1)
+    ).rejects.toThrow(/line item/i);
   });
 });

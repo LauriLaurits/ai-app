@@ -38,7 +38,7 @@ export function registerGetCheckoutLink(server: McpServer, ctx: ToolContext): vo
         }
 
         return jsonResult({
-          checkoutUrl: template.replace("{cartId}", encodeURIComponent(cart.id)),
+          checkoutUrl: template.replaceAll("{cartId}", encodeURIComponent(cart.id)),
           message: null,
         });
       })

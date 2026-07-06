@@ -20,6 +20,7 @@ interface TokenResponse {
   refresh_token: string;
   expires_in: number;
   token_type: string;
+  scope: string;
 }
 
 function pkcePair() {
@@ -40,9 +41,14 @@ function baseAuthorizeParams(challenge: string): Record<string, string> {
   };
 }
 
-async function login(challenge: string, password = "secret"): Promise<string | null> {
+async function login(
+  challenge: string,
+  password = "secret",
+  scope?: string
+): Promise<string | null> {
   const form = new URLSearchParams({
     ...baseAuthorizeParams(challenge),
+    ...(scope ? { scope } : {}),
     email: "lauri@example.com",
     password,
   });
@@ -235,6 +241,23 @@ describe("OAuth broker flow", () => {
       refresh_token: tokens.refresh_token,
     });
     expect(replay.statusCode).toBe(400);
+  });
+
+  it("reports the session's actual narrowed scope, not the full supported-scope list", async () => {
+    const { verifier, challenge } = pkcePair();
+    const code = await login(challenge, "secret", "profile.read orders.read");
+
+    const out = await tokenRequest({
+      grant_type: "authorization_code",
+      client_id: "chatgpt",
+      redirect_uri: redirectUri,
+      code: code ?? "",
+      code_verifier: verifier,
+    });
+
+    expect(out.statusCode).toBe(200);
+    const tokens = out.json() as TokenResponse;
+    expect(tokens.scope).toBe("profile.read orders.read");
   });
 
   it("rejects unknown clients at the token endpoint", async () => {

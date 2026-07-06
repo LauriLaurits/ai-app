@@ -3,7 +3,6 @@ import type { ServerResponse } from "node:http";
 import { refreshCustomerToken } from "../medusa/client.js";
 import type { AppConfig, BrokerSession } from "../types.js";
 import { sendJson } from "./http.js";
-import { supportedScopes } from "./validation.js";
 import {
   consumeAuthorizationCode,
   consumeRefreshToken,
@@ -31,13 +30,13 @@ function pkceS256(verifier: string): string {
 }
 
 export function createTokenGrants(config: AppConfig): TokenGrants {
-  function tokenResponse(accessToken: string, refreshToken: string) {
+  function tokenResponse(accessToken: string, refreshToken: string, scopes: string[]) {
     return {
       access_token: accessToken,
       token_type: "Bearer",
       expires_in: config.broker.accessTokenTtlSec,
       refresh_token: refreshToken,
-      scope: supportedScopes(config).join(" "),
+      scope: scopes.join(" "),
     };
   }
 
@@ -49,7 +48,7 @@ export function createTokenGrants(config: AppConfig): TokenGrants {
     await storeAccessToken(accessToken, payload, config.broker.accessTokenTtlSec);
     await storeRefreshToken(refreshToken, payload, config.broker.refreshTokenTtlSec);
 
-    return tokenResponse(accessToken, refreshToken);
+    return tokenResponse(accessToken, refreshToken, payload.scopes);
   }
 
   return {

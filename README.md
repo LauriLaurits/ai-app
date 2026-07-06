@@ -9,7 +9,7 @@ This project intentionally works before the Apotheka repo is available. It ships
 - `/mcp` streamable HTTP MCP endpoint for ChatGPT.
 - OAuth protected resource metadata at `/.well-known/oauth-protected-resource`.
 - OAuth broker that logs Medusa customers in and keeps their session alive via refresh-token rotation (see [docs/oauth-broker.md](docs/oauth-broker.md)).
-- Read-only MCP tools:
+- MCP tools (read-only except the cart write tools, which require confirmation):
   - `get_current_customer` — authenticated customer's profile
   - `list_orders` — recent order summaries
   - `get_order_details` — line items, total, delivery for one order

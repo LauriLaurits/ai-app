@@ -53,7 +53,7 @@ UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
 ```
 
-Do not set `MEDUSA_CUSTOMER_EMAIL` or `MEDUSA_CUSTOMER_PASSWORD` for broker production mode. Those are only for the older staging shared-customer demo.
+Do not set `MEDUSA_CUSTOMER_EMAIL` or `MEDUSA_CUSTOMER_PASSWORD` for broker production mode. Those are only for the older staging shared-customer demo. `AUTH_MODE=demo` is read-only for carts: it never grants `cart.write`, since every demo visitor shares the same customer id and a real login is required before any cart mutation is allowed.
 
 ## Login Abuse Protection
 

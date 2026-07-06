@@ -1,4 +1,5 @@
 import { MedusaRequestError } from "../../medusa/client.js";
+import { CartNotFoundError } from "../cartErrors.js";
 import {
   clearActiveCartId,
   getActiveCartId,
@@ -114,7 +115,9 @@ export function createMedusaCartMethods(
     async updateCartItem(identity, lineItemId, quantity) {
       const cartId = await getActiveCartId(identity.userId);
       if (!cartId) {
-        throw new MedusaRequestError("No active cart to update.", 404);
+        throw new CartNotFoundError(
+          "There is no active cart yet. Add an item to the cart first."
+        );
       }
 
       const linePath = `/store/carts/${encodeURIComponent(cartId)}/line-items/${encodeURIComponent(lineItemId)}`;

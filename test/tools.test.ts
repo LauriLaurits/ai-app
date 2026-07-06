@@ -2,6 +2,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { describe, expect, it } from "vitest";
 import { MedusaAuthError } from "../src/medusa/client.js";
+import { CartNotFoundError } from "../src/shop/cartErrors.js";
 import { createWebshopMcpServer } from "../src/tools/index.js";
 import type { AppConfig, AppLogger, AuthResult, ShopAdapter } from "../src/types.js";
 import { makeConfig } from "./helpers.js";
@@ -270,6 +271,26 @@ describe("MCP tools", () => {
     expect(result.content?.[0]?.text).not.toContain("database exploded");
   });
 
+  it("returns an honest cart-not-found message, not the generic try-again-later error", async () => {
+    const noActiveCartShop: ShopAdapter = {
+      ...workingShop(),
+      async updateCartItem() {
+        throw new CartNotFoundError(
+          "There is no active cart yet. Add an item to the cart first."
+        );
+      },
+    };
+    const result = await callTool(authenticated, noActiveCartShop, "update_cart_item", {
+      lineItemId: "line_1",
+      quantity: 1,
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content?.[0]?.text).toBe(
+      "There is no active cart yet. Add an item to the cart first."
+    );
+  });
+
   it("adds items to the cart and returns the updated cart", async () => {
     const result = await callTool(authenticated, workingShop(), "add_to_cart", {
       variantId: "var_1",
@@ -314,9 +335,11 @@ describe("MCP tools", () => {
     expect((result.structuredContent as { checkoutUrl: unknown }).checkoutUrl).toBeNull();
   });
 
-  it("builds the checkout link from the configured template", async () => {
+  it("builds the checkout link from the configured template, substituting every {cartId} placeholder", async () => {
     const checkoutConfig = makeConfig({
-      checkout: { urlTemplate: "https://shop.test/checkout?cart={cartId}" },
+      checkout: {
+        urlTemplate: "https://shop.test/checkout?cart={cartId}&ref={cartId}",
+      },
     });
     const result = (await withClient(
       authenticated,
@@ -326,7 +349,7 @@ describe("MCP tools", () => {
     )) as { structuredContent?: Record<string, unknown> };
 
     expect(result.structuredContent?.checkoutUrl).toBe(
-      "https://shop.test/checkout?cart=cart_1"
+      "https://shop.test/checkout?cart=cart_1&ref=cart_1"
     );
   });
 });

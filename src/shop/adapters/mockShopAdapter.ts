@@ -1,3 +1,4 @@
+import { CartNotFoundError } from "../cartErrors.js";
 import type {
   Cart,
   CartItemInput,
@@ -315,7 +316,9 @@ export function createMockShopAdapter(): ShopAdapter {
       const cart = carts.get(identity.userId);
       const line = cart?.items.find((entry) => entry.id === lineItemId);
       if (!cart || !line) {
-        throw new Error(`Unknown cart line item: ${lineItemId}`);
+        throw new CartNotFoundError(
+          `No cart line item ${lineItemId}. Use view_cart to see current line items.`
+        );
       }
 
       const items =

@@ -47,7 +47,11 @@ function demoAuthResult(config: AppConfig): AuthResult {
       displayName: "Demo Customer",
       shopIds: ["apotheka"],
     },
-    scopes: supportedScopes(config),
+    // Demo mode is unauthenticated and every visitor shares userId
+    // "demo-user-1", so cart.write (a shared mutable cart on a real backend)
+    // is never granted here. Only mock mode (explicit bearer token, local
+    // dev) gets the full scope set.
+    scopes: [config.scopes.profileRead, config.scopes.ordersRead, config.scopes.cartRead],
     reason: null,
   };
 }

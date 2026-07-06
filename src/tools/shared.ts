@@ -2,6 +2,7 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { authErrorResult, requireScopes } from "../auth/challenge.js";
 import { hashUserId } from "../logging/logger.js";
 import { MedusaAuthError } from "../medusa/client.js";
+import { CartNotFoundError } from "../shop/cartErrors.js";
 import type { AppConfig, AppLogger, AuthResult, Identity, ShopAdapter } from "../types.js";
 
 export interface ToolContext {
@@ -77,10 +78,23 @@ export async function runTool(
       toolName,
       userIdHash,
       durationMs: Date.now() - startedAt,
-      errorCode: error instanceof MedusaAuthError ? "shop_session_expired" : "tool_error",
+      errorCode:
+        error instanceof MedusaAuthError
+          ? "shop_session_expired"
+          : error instanceof CartNotFoundError
+            ? "cart_not_found"
+            : "tool_error",
       errorMessage: error instanceof Error ? error.message : "Unknown error",
       ...(payloadMode !== "off" ? { arguments: args ?? {} } : {}),
     });
+
+    if (error instanceof CartNotFoundError) {
+      return {
+        content: [{ type: "text", text: error.message }],
+        structuredContent: {},
+        isError: true,
+      };
+    }
 
     if (error instanceof MedusaAuthError) {
       return authErrorResult(
