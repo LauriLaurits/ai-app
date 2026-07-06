@@ -75,3 +75,20 @@ export const customerSchema = z.object({
   loyaltyTier: z.string().nullable(),
   defaultShop: z.string(),
 });
+
+export const cartLineSchema = z.object({
+  id: z.string(),
+  variantId: z.string().nullable(),
+  productId: z.string().nullable(),
+  title: z.string(),
+  quantity: z.number(),
+  unitPrice: moneySchema,
+  lineTotal: moneySchema,
+});
+
+export const cartSchema = z.object({
+  id: z.string(),
+  items: z.array(cartLineSchema),
+  itemCount: z.number(),
+  total: moneySchema,
+});

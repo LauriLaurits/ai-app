@@ -3,7 +3,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { describe, expect, it } from "vitest";
 import { MedusaAuthError } from "../src/medusa/client.js";
 import { createWebshopMcpServer } from "../src/tools/index.js";
-import type { AppLogger, AuthResult, ShopAdapter } from "../src/types.js";
+import type { AppConfig, AppLogger, AuthResult, ShopAdapter } from "../src/types.js";
 import { makeConfig } from "./helpers.js";
 
 const config = makeConfig();
@@ -22,7 +22,7 @@ const authenticated: AuthResult = {
     shopIds: ["medusa"],
     medusaToken: "medusa-jwt-1",
   },
-  scopes: ["profile.read", "orders.read"],
+  scopes: ["profile.read", "orders.read", "cart.read", "cart.write"],
   reason: null,
 };
 
@@ -136,10 +136,11 @@ function expiredShop(): ShopAdapter {
 async function withClient<T>(
   auth: AuthResult,
   shop: ShopAdapter,
-  fn: (client: Client) => Promise<T>
+  fn: (client: Client) => Promise<T>,
+  cfg: AppConfig = config
 ): Promise<T> {
   const server = createWebshopMcpServer({
-    config,
+    config: cfg,
     auth,
     shop,
     logger: silentLogger,
@@ -184,12 +185,16 @@ describe("MCP tools", () => {
     });
 
     expect(names).toEqual([
+      "add_to_cart",
+      "get_checkout_link",
       "get_current_customer",
       "get_order_details",
       "get_product",
       "list_orders",
       "search_products",
       "track_shipment",
+      "update_cart_item",
+      "view_cart",
     ]);
   });
 
@@ -263,5 +268,65 @@ describe("MCP tools", () => {
     expect(result.isError).toBe(true);
     expect(result.content?.[0]?.text).toContain("Please try again later");
     expect(result.content?.[0]?.text).not.toContain("database exploded");
+  });
+
+  it("adds items to the cart and returns the updated cart", async () => {
+    const result = await callTool(authenticated, workingShop(), "add_to_cart", {
+      variantId: "var_1",
+      quantity: 2,
+    });
+
+    expect(result.isError).toBeFalsy();
+    const cart = (result.structuredContent as { cart: { itemCount: number } }).cart;
+    expect(cart.itemCount).toBe(2);
+  });
+
+  it("marks cart write tools as non-read-only", async () => {
+    const tools = await withClient(authenticated, workingShop(), async (client) => {
+      const { tools: list } = await client.listTools();
+      return list;
+    });
+
+    const addToCart = tools.find((tool) => tool.name === "add_to_cart");
+    expect(addToCart?.annotations?.readOnlyHint).toBe(false);
+    const viewCart = tools.find((tool) => tool.name === "view_cart");
+    expect(viewCart?.annotations?.readOnlyHint).toBe(true);
+  });
+
+  it("blocks cart writes for tokens without cart.write", async () => {
+    const readOnly: AuthResult = {
+      ...authenticated,
+      scopes: ["profile.read", "orders.read", "cart.read"],
+    };
+    const result = await callTool(readOnly, workingShop(), "add_to_cart", {
+      variantId: "var_1",
+      quantity: 1,
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result._meta?.["mcp/www_authenticate"]).toBeDefined();
+  });
+
+  it("reports when the checkout handoff is not configured", async () => {
+    const result = await callTool(authenticated, workingShop(), "get_checkout_link");
+
+    expect(result.isError).toBeFalsy();
+    expect((result.structuredContent as { checkoutUrl: unknown }).checkoutUrl).toBeNull();
+  });
+
+  it("builds the checkout link from the configured template", async () => {
+    const checkoutConfig = makeConfig({
+      checkout: { urlTemplate: "https://shop.test/checkout?cart={cartId}" },
+    });
+    const result = (await withClient(
+      authenticated,
+      workingShop(),
+      (client) => client.callTool({ name: "get_checkout_link", arguments: {} }),
+      checkoutConfig
+    )) as { structuredContent?: Record<string, unknown> };
+
+    expect(result.structuredContent?.checkoutUrl).toBe(
+      "https://shop.test/checkout?cart=cart_1"
+    );
   });
 });
