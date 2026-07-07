@@ -88,6 +88,8 @@ const html = `<!doctype html>
   }
 
   function onAdd(card, product) {
+    var btns = card.querySelectorAll("button");
+    btns.forEach(function (b) { b.disabled = true; });
     if (product.variants && product.variants.length) {
       pick(card, product.variants);
       return;
@@ -98,6 +100,7 @@ const html = `<!doctype html>
       pick(card, (full && full.variants) || []);
     }).catch(function () {
       note(card, "err", "Could not load product options.");
+      btns.forEach(function (b) { b.disabled = false; });
     });
   }
 
