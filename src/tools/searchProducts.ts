@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { PRODUCT_GRID_URI, widgetToolMeta } from "../widgets/index.js";
 import { productSummarySchema } from "./schemas.js";
 import { jsonResult, runTool, type ToolContext } from "./shared.js";
 
@@ -25,6 +26,7 @@ export function registerSearchProducts(server: McpServer, ctx: ToolContext): voi
         count: z.number(),
       },
       annotations: { readOnlyHint: true, openWorldHint: true },
+      _meta: widgetToolMeta(PRODUCT_GRID_URI, "Searching the catalog…", "Products found"),
     },
     async (args) =>
       runTool(ctx, "search_products", args, scopes, async () => {

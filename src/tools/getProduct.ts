@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { PRODUCT_GRID_URI, widgetToolMeta } from "../widgets/index.js";
 import { productDetailsSchema } from "./schemas.js";
 import { jsonResult, runTool, type ToolContext } from "./shared.js";
 
@@ -15,6 +16,7 @@ export function registerGetProduct(server: McpServer, ctx: ToolContext): void {
       inputSchema: { productId: z.string().min(1) },
       outputSchema: { product: productDetailsSchema.nullable() },
       annotations: { readOnlyHint: true, openWorldHint: true },
+      _meta: widgetToolMeta(PRODUCT_GRID_URI, "Loading product…", "Product loaded"),
     },
     async (args) =>
       runTool(ctx, "get_product", args, scopes, async () => {

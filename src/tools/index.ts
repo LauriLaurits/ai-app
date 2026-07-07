@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { AppConfig, AppLogger, AuthResult, ShopAdapter } from "../types.js";
+import { registerWidgets } from "../widgets/index.js";
 import { registerAddToCart } from "./addToCart.js";
 import { registerGetCheckoutLink } from "./getCheckoutLink.js";
 import { registerGetCurrentCustomer } from "./getCurrentCustomer.js";
@@ -23,6 +24,8 @@ export interface CreateServerOptions {
 export function createWebshopMcpServer(options: CreateServerOptions): McpServer {
   const server = new McpServer({ name: "webshop-orders", version: "0.4.0" });
   const ctx: ToolContext = options;
+
+  registerWidgets(server, options.config);
 
   registerGetCurrentCustomer(server, ctx);
   registerListOrders(server, ctx);

@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { CART_URI, widgetToolMeta } from "../widgets/index.js";
 import { cartSchema } from "./schemas.js";
 import { jsonResult, runTool, type ToolContext } from "./shared.js";
 
@@ -15,6 +16,7 @@ export function registerViewCart(server: McpServer, ctx: ToolContext): void {
       inputSchema: {},
       outputSchema: { cart: cartSchema.nullable() },
       annotations: { readOnlyHint: true, openWorldHint: true },
+      _meta: widgetToolMeta(CART_URI, "Loading your cart…", "Cart loaded"),
     },
     async (args) =>
       runTool(ctx, "view_cart", args, scopes, async (identity) => {

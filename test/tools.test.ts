@@ -352,4 +352,30 @@ describe("MCP tools", () => {
       "https://shop.test/checkout?cart=cart_1&ref=cart_1"
     );
   });
+
+  it("serves both widget resources", async () => {
+    const uris = await withClient(authenticated, workingShop(), async (client) => {
+      const { resources } = await client.listResources();
+      return resources.map((resource) => resource.uri).sort();
+    });
+
+    expect(uris).toEqual(["ui://widget/cart.html", "ui://widget/product-grid.html"]);
+  });
+
+  it("attaches widget templates to catalog and cart tools", async () => {
+    const tools = await withClient(authenticated, workingShop(), async (client) => {
+      const { tools: list } = await client.listTools();
+      return list;
+    });
+
+    const templateOf = (name: string) =>
+      (tools.find((tool) => tool.name === name)?._meta ?? {})["openai/outputTemplate"];
+
+    expect(templateOf("search_products")).toBe("ui://widget/product-grid.html");
+    expect(templateOf("get_product")).toBe("ui://widget/product-grid.html");
+    expect(templateOf("view_cart")).toBe("ui://widget/cart.html");
+    expect(templateOf("add_to_cart")).toBe("ui://widget/cart.html");
+    expect(templateOf("update_cart_item")).toBe("ui://widget/cart.html");
+    expect(templateOf("list_orders")).toBeUndefined();
+  });
 });

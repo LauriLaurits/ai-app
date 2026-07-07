@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { CART_URI, widgetToolMeta } from "../widgets/index.js";
 import { cartSchema } from "./schemas.js";
 import { jsonResult, runTool, type ToolContext } from "./shared.js";
 
@@ -19,6 +20,7 @@ export function registerAddToCart(server: McpServer, ctx: ToolContext): void {
       },
       outputSchema: { cart: cartSchema },
       annotations: { readOnlyHint: false, idempotentHint: false, openWorldHint: true },
+      _meta: widgetToolMeta(CART_URI, "Adding to your cart…", "Added to cart"),
     },
     async (args) =>
       runTool(ctx, "add_to_cart", args, scopes, async (identity) => {
