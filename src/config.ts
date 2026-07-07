@@ -49,6 +49,14 @@ export const config: AppConfig = Object.freeze({
     // active cart id. Empty disables the handoff link.
     urlTemplate: process.env.CHECKOUT_URL_TEMPLATE ?? "",
   },
+  widgets: {
+    // Hosts product thumbnails may load from inside ChatGPT widgets (CSP
+    // allowlist). Comma-separated origins; empty disables remote images.
+    imageDomains: (process.env.WIDGET_IMAGE_DOMAINS ?? "")
+      .split(",")
+      .map((domain) => domain.trim())
+      .filter(Boolean),
+  },
   medusa: {
     baseUrl: normalizeBaseUrl(process.env.MEDUSA_BASE_URL ?? ""),
     publishableKey: process.env.MEDUSA_PUBLISHABLE_KEY ?? "",

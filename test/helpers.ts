@@ -23,6 +23,7 @@ export function makeConfig(overrides: DeepPartial<AppConfig> = {}): AppConfig {
     logging: { payloadMode: "off" },
     shop: { adapter: "medusa" },
     checkout: { urlTemplate: "" },
+    widgets: { imageDomains: [] },
     medusa: {
       baseUrl: "https://medusa.test",
       publishableKey: "pk_test",

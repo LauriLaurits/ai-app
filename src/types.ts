@@ -24,6 +24,9 @@ export interface AppConfig {
   checkout: {
     urlTemplate: string;
   };
+  widgets: {
+    imageDomains: string[];
+  };
   medusa: {
     baseUrl: string;
     publishableKey: string;
