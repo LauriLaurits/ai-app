@@ -36,8 +36,11 @@ export function toNumber(value: unknown): number {
 
 export function toMajorUnits(amount: number, currency: string): number {
   const exponent = minorUnitExponent(currency);
-  if (exponent === 0) return amount;
-  return amount / 10 ** exponent;
+  const factor = 10 ** exponent;
+  const major = amount / factor;
+  // Medusa can produce fractional minor units (tax/discount math); round the
+  // major-unit value to the currency's exponent so 735.3 cents → €7.35.
+  return Math.round(major * factor) / factor;
 }
 
 export function money(amount: unknown, currencyCode: unknown): Money {

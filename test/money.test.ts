@@ -25,4 +25,15 @@ describe("money normalization", () => {
     expect(money("29731", "EUR")).toEqual({ amount: 297.31, currency: "EUR" });
     expect(money(undefined, "EUR")).toEqual({ amount: 0, currency: "EUR" });
   });
+
+  it("rounds fractional minor units to the currency exponent", () => {
+    expect(money(735.3, "eur")).toEqual({ amount: 7.35, currency: "EUR" });
+    expect(money(735.5, "eur")).toEqual({ amount: 7.36, currency: "EUR" });
+    expect(money(1500.6, "jpy")).toEqual({ amount: 1501, currency: "JPY" });
+    expect(money(1234.4, "bhd")).toEqual({ amount: 1.234, currency: "BHD" });
+  });
+
+  it("keeps whole minor units exact", () => {
+    expect(money(29731, "eur")).toEqual({ amount: 297.31, currency: "EUR" });
+  });
 });
