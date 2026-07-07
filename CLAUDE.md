@@ -40,6 +40,8 @@ These are hard rules for this codebase. Do not regress them.
   - OAuth broker → `src/oauth/*`
   - Auth/identity → `src/auth/*`
   - Tool definitions → `src/tools/*` (one file per tool)
+  - ChatGPT widget templates → `src/widgets/*` (Apps SDK resources; pure
+    presentation, no business logic, self-contained HTML/JS)
   - Shop access → `src/shop/adapters/*` (Medusa I/O) with **pure mapping** in
     `medusaMappers.ts` (no I/O, easily unit-tested)
   - Money normalization → `src/money.ts` (single source of truth)

@@ -20,6 +20,15 @@ This project intentionally works before the Apotheka repo is available. It ships
   - `view_cart` — show the active cart with totals (requires `cart.read`)
   - `update_cart_item` — change a line's quantity; 0 removes it (requires `cart.write`)
   - `get_checkout_link` — hand off to the storefront checkout; payment never happens in chat
+
+### ChatGPT widgets
+
+Catalog and cart tools render as interactive views in ChatGPT (Apps SDK):
+product cards with add-to-cart, and a cart with quantity steppers and a
+checkout button. Widgets are served by the MCP server itself
+(`src/widgets/`). Set `WIDGET_IMAGE_DOMAINS` so product thumbnails may load
+inside ChatGPT's sandbox; without it, placeholder tiles are shown.
+
 - Mock auth mode for local development.
 - JWT verification mode for staging/production.
 - Structured request and tool logging.
