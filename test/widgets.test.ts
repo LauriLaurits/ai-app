@@ -10,6 +10,7 @@ import {
 } from "../src/widgets/registry.js";
 import { makeConfig } from "./helpers.js";
 import { productGridWidget } from "../src/widgets/productGridWidget.js";
+import { cartWidget } from "../src/widgets/cartWidget.js";
 
 const sampleWidget: WidgetDefinition = {
   name: "sample-widget",
@@ -93,5 +94,22 @@ describe("product grid widget template", () => {
 
   it("handles the empty state", () => {
     expect(productGridWidget.html).toContain("No products found");
+  });
+});
+
+describe("cart widget template", () => {
+  it("is a self-contained document wired to cart tools", () => {
+    expect(cartWidget.uri).toBe("ui://widget/cart.html");
+    expect(cartWidget.html).toContain("window.openai");
+    expect(cartWidget.html).toContain("update_cart_item");
+    expect(cartWidget.html).toContain("get_checkout_link");
+    expect(cartWidget.html).toContain("openExternal");
+    expect(cartWidget.html).not.toMatch(/<script[^>]+src=/i);
+    expect(cartWidget.html).not.toMatch(/<link[^>]/i);
+  });
+
+  it("escapes shop-provided text and has an empty state", () => {
+    expect(cartWidget.html).toContain("function esc(");
+    expect(cartWidget.html).toContain("Your cart is empty");
   });
 });
