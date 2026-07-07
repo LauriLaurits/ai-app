@@ -9,6 +9,7 @@ import {
   type WidgetDefinition,
 } from "../src/widgets/registry.js";
 import { makeConfig } from "./helpers.js";
+import { productGridWidget } from "../src/widgets/productGridWidget.js";
 
 const sampleWidget: WidgetDefinition = {
   name: "sample-widget",
@@ -73,5 +74,24 @@ describe("widget registry", () => {
     expect((meta.ui as { resourceUri: string }).resourceUri).toBe("ui://widget/sample.html");
     expect(meta["openai/toolInvocation/invoking"]).toBe("Working…");
     expect(meta["openai/toolInvocation/invoked"]).toBe("Done");
+  });
+});
+
+describe("product grid widget template", () => {
+  it("is a self-contained document using the openai bridge", () => {
+    expect(productGridWidget.uri).toBe("ui://widget/product-grid.html");
+    expect(productGridWidget.html).toContain("window.openai");
+    expect(productGridWidget.html).toContain("openai:set_globals");
+    expect(productGridWidget.html).toContain("add_to_cart");
+    expect(productGridWidget.html).not.toMatch(/<script[^>]+src=/i);
+    expect(productGridWidget.html).not.toMatch(/<link[^>]/i);
+  });
+
+  it("escapes shop-provided text before rendering", () => {
+    expect(productGridWidget.html).toContain("function esc(");
+  });
+
+  it("handles the empty state", () => {
+    expect(productGridWidget.html).toContain("No products found");
   });
 });
