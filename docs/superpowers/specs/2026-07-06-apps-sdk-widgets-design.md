@@ -32,7 +32,7 @@ Two widgets. Orders/tracking widgets are explicitly deferred to v2.
 
 ## Mechanism (Apps SDK)
 
-- Each widget is an MCP **resource** with MIME type `text/html+skybridge`,
+- Each widget is an MCP **resource** with MIME type `text/html;profile=mcp-app`,
   registered by the server. ChatGPT fetches it once and renders it in a
   sandboxed iframe.
 - Each attached tool's descriptor carries
@@ -72,8 +72,9 @@ src/widgets/
   `prefers-color-scheme`.
 - Inline CSS/JS only; no external stylesheets, fonts, or scripts.
 - Product thumbnails are external images (Medusa/CDN). Their host(s) must be
-  declared in the widget CSP allowlist: `_meta["openai/widgetCSP"]` with
-  resource domains from a new env var `WIDGET_IMAGE_DOMAINS`
+  declared in the widget CSP allowlist: `_meta["ui"].csp` (with a legacy
+  `_meta["openai/widgetCSP"]` alias for hosts that only read the openai/*
+  namespace) with resource domains from a new env var `WIDGET_IMAGE_DOMAINS`
   (comma-separated, e.g. `https://cdn.yourshop.example`). Empty ⇒ widgets
   render without images (placeholder block), nothing breaks.
 
@@ -91,7 +92,7 @@ src/widgets/
 
 - Wiring tests via the in-memory MCP client:
   - `resources/list` contains both widget URIs with MIME
-    `text/html+skybridge`; `resources/read` returns non-empty HTML.
+    `text/html;profile=mcp-app`; `resources/read` returns non-empty HTML.
   - Each attached tool's descriptor advertises the correct
     `_meta["openai/outputTemplate"]`.
 - Template sanity unit tests: HTML contains `window.openai` bridge usage,

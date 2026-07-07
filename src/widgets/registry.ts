@@ -33,6 +33,12 @@ function resourceMeta(config: AppConfig, widget: WidgetDefinition): Record<strin
         resourceDomains: config.widgets.imageDomains,
       },
     },
+    // Legacy alias: some hosts only read the openai/* namespace, not ui.*.
+    "openai/widgetCSP": {
+      connect_domains: [],
+      resource_domains: config.widgets.imageDomains,
+    },
+    "openai/widgetPrefersBorder": true,
   };
 }
 

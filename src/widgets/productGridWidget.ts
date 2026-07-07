@@ -132,11 +132,23 @@ const html = `<!doctype html>
       '<div class="variants"></div>' +
       '<div class="note"></div>';
     el.querySelector(".btn.primary").addEventListener("click", function () { onAdd(el, product); });
+    var img = el.querySelector("img.thumb");
+    if (img) {
+      img.addEventListener("error", function () {
+        var ph = document.createElement("div");
+        ph.className = "thumb ph";
+        ph.textContent = "🛍️";
+        img.replaceWith(ph);
+      });
+    }
     return el;
   }
 
+  var lastOutput = null;
   function render() {
     var out = (window.openai && window.openai.toolOutput) || {};
+    if (out === lastOutput) return;
+    lastOutput = out;
     var products = out.products || (out.product ? [out.product] : []);
     root.innerHTML = "";
     if (!products.length) {

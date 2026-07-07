@@ -134,8 +134,11 @@ const html = `<!doctype html>
     box.appendChild(note);
   }
 
+  var lastOutput = null;
   function renderFromGlobals() {
     var out = (window.openai && window.openai.toolOutput) || {};
+    if (out === lastOutput) return;
+    lastOutput = out;
     render(out.cart || null);
   }
 

@@ -36,4 +36,8 @@ describe("money normalization", () => {
   it("keeps whole minor units exact", () => {
     expect(money(29731, "eur")).toEqual({ amount: 297.31, currency: "EUR" });
   });
+
+  it("rounds exact half minor units without floating point drift", () => {
+    expect(money(29021.5, "eur")).toEqual({ amount: 290.22, currency: "EUR" });
+  });
 });

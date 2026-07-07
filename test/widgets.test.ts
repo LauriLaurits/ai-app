@@ -65,8 +65,10 @@ describe("widget registry", () => {
 
     const meta = contents[0]?._meta as {
       ui?: { csp?: { resourceDomains?: string[] } };
+      "openai/widgetCSP"?: { resource_domains?: string[] };
     };
     expect(meta?.ui?.csp?.resourceDomains).toEqual(["https://cdn.shop.test"]);
+    expect(meta?.["openai/widgetCSP"]?.resource_domains).toEqual(["https://cdn.shop.test"]);
   });
 
   it("builds tool meta with template uri and status texts", () => {
@@ -95,6 +97,14 @@ describe("product grid widget template", () => {
   it("handles the empty state", () => {
     expect(productGridWidget.html).toContain("No products found");
   });
+
+  it("falls back to a placeholder when a thumbnail image fails to load", () => {
+    expect(productGridWidget.html).toContain('addEventListener("error"');
+  });
+
+  it("guards against re-rendering from stale globals", () => {
+    expect(productGridWidget.html).toContain("lastOutput");
+  });
 });
 
 describe("cart widget template", () => {
@@ -111,5 +121,9 @@ describe("cart widget template", () => {
   it("escapes shop-provided text and has an empty state", () => {
     expect(cartWidget.html).toContain("function esc(");
     expect(cartWidget.html).toContain("Your cart is empty");
+  });
+
+  it("guards against re-rendering from stale globals", () => {
+    expect(cartWidget.html).toContain("lastOutput");
   });
 });
